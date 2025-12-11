@@ -65,26 +65,35 @@ export class DatabaseRowsService {
             order: { createdAt: 'ASC' },
         });
 
-        // Get all property values for these rows
-        const rowIds = rows.map((r) => r.id);
-
-        if (rowIds.length === 0) {
+        if (rows.length === 0) {
             return [];
         }
 
-        const values = await this.propertyValueRepository
-            .createQueryBuilder('value')
-            .where('value.rowId IN (:...rowIds)', { rowIds })
-            .leftJoinAndSelect('value.property', 'property')
-            .getMany();
+        // Get all property values for these rows
+        const rowIds = rows.map((r) => r.id);
+
+        const values = await this.propertyValueRepository.find({
+            where: rowIds.map(id => ({ rowId: id })),
+        });
+
+        // Get all properties for this database (to include property info)
+        const properties = await this.propertyRepository.find({
+            where: { databaseId },
+        });
+
+        const propertiesMap = new Map(properties.map(p => [p.id, p]));
 
         // Group values by row
-        const valuesByRow = new Map<string, DatabasePropertyValue[]>();
+        const valuesByRow = new Map<string, any[]>();
         for (const value of values) {
             if (!valuesByRow.has(value.rowId)) {
                 valuesByRow.set(value.rowId, []);
             }
-            valuesByRow.get(value.rowId)!.push(value);
+            const property = propertiesMap.get(value.propertyId);
+            valuesByRow.get(value.rowId)!.push({
+                ...value,
+                property,
+            });
         }
 
         // Attach values to rows
@@ -106,12 +115,24 @@ export class DatabaseRowsService {
         // Get all values for this row
         const values = await this.propertyValueRepository.find({
             where: { rowId },
-            relations: ['property'],
         });
+
+        // Get properties
+        const properties = await this.propertyRepository.find({
+            where: { databaseId },
+        });
+
+        const propertiesMap = new Map(properties.map(p => [p.id, p]));
+
+        // Attach property info to each value
+        const valuesWithProperties = values.map(v => ({
+            ...v,
+            property: propertiesMap.get(v.propertyId),
+        }));
 
         return {
             ...row,
-            values,
+            values: valuesWithProperties,
         };
     }
 
