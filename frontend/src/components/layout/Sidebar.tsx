@@ -8,6 +8,7 @@ import { Plus, Layout, Settings, LogOut, ChevronRight, ChevronDown } from "lucid
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { PageTree } from "./PageTree"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
 
 export function Sidebar({ className }: { className?: string }) {
@@ -108,6 +109,10 @@ export function Sidebar({ className }: { className?: string }) {
 
             {/* Footer */}
             <div className="px-3 py-4 border-t space-y-1">
+                <div className="flex items-center justify-between px-2">
+                    <span className="text-sm text-muted-foreground">Tema</span>
+                    <ThemeToggle />
+                </div>
                 <Button variant="ghost" className="w-full justify-start text-sm">
                     <Settings className="mr-2 h-4 w-4" />
                     Configuración
