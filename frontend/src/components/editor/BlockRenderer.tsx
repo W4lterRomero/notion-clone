@@ -5,6 +5,11 @@ import { Block, UpdateBlockInput } from "@/hooks/useBlocks";
 import { cn } from "@/lib/utils";
 import { debounce } from "@/lib/debounce";
 import { SlashCommand } from "./SlashCommand";
+
+// R12: @dnd-kit sortable imports
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 import {
     GripVertical,
     Plus,
@@ -92,6 +97,23 @@ export function BlockRenderer({
 }: BlockRendererProps) {
     const contentRef = useRef<HTMLDivElement>(null);
     const [isHovered, setIsHovered] = useState(false);
+
+    // R12: useSortable hook for drag & drop
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: block.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 50 : 'auto',
+    };
 
     // Round 43: Slash command state
     const [showSlashMenu, setShowSlashMenu] = useState(false);
@@ -391,6 +413,8 @@ export function BlockRenderer({
     if (block.type === "divider") {
         return (
             <div
+                ref={setNodeRef}
+                style={style}
                 data-block-id={block.id}
                 className="group relative py-2"
                 onMouseEnter={() => setIsHovered(true)}
@@ -402,7 +426,11 @@ export function BlockRenderer({
                         isHovered && "opacity-100"
                     )}
                 >
-                    <button className="p-1 rounded hover:bg-muted cursor-grab">
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="p-1 rounded hover:bg-muted cursor-grab active:cursor-grabbing"
+                    >
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                     </button>
                     <button
@@ -442,8 +470,10 @@ export function BlockRenderer({
 
     return (
         <div
+            ref={setNodeRef}
+            style={style}
             data-block-id={block.id}
-            className="group relative"
+            className={cn("group relative", isDragging && "shadow-lg rounded-md bg-background")}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -473,7 +503,12 @@ export function BlockRenderer({
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                <button className="p-1 rounded hover:bg-muted cursor-grab">
+                {/* R12: Drag handle with sortable listeners */}
+                <button
+                    {...attributes}
+                    {...listeners}
+                    className="p-1 rounded hover:bg-muted cursor-grab active:cursor-grabbing"
+                >
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </button>
             </div>

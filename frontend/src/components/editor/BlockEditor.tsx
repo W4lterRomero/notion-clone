@@ -6,13 +6,39 @@ import { BlockRenderer } from "./BlockRenderer";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// R11: @dnd-kit imports for drag & drop
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+
 interface BlockEditorProps {
     pageId: string;
 }
 
 export function BlockEditor({ pageId }: BlockEditorProps) {
-    const { blocks, isLoading, createBlock, updateBlock, deleteBlock } = useBlocks(pageId);
+    const { blocks, isLoading, createBlock, updateBlock, deleteBlock, reorderBlocks } = useBlocks(pageId);
     const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+
+    // R11: Setup drag sensors with activation constraint
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // 8px movement required before drag starts
+            },
+        }),
+        useSensor(KeyboardSensor)
+    );
 
     // Helper to get block at specific position
     const getBlockAtPosition = useCallback((position: number) => {
@@ -52,8 +78,36 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
         }
     }, [deleteBlock]);
 
+    // R11-R13: Handle drag end and reorder blocks
+    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = blocks.findIndex(b => b.id === active.id);
+        const newIndex = blocks.findIndex(b => b.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) {
+            return;
+        }
+
+        // Calculate new positions for reordering
+        const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex);
+        const blocksWithNewPositions = reorderedBlocks.map((block, index) => ({
+            id: block.id,
+            position: index,
+        }));
+
+        try {
+            await reorderBlocks(blocksWithNewPositions);
+        } catch (error) {
+            console.error('Failed to reorder blocks:', error);
+        }
+    }, [blocks, reorderBlocks]);
+
     // R1-R4: Split block at cursor position
-    // Called when user presses Enter in the middle of a block
     const handleSplitBlock = useCallback(async (
         blockId: string,
         contentBefore: string,
@@ -63,17 +117,13 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
         if (!block) return;
 
         try {
-            // 1. Update current block with content before cursor
             await updateBlock({ id: blockId, data: { content: contentBefore } });
 
-            // 2. Determine type for new block
-            // Headings split into paragraphs, lists/todos keep their type
             let newBlockType = 'paragraph';
             if (['bulleted_list', 'numbered_list', 'todo', 'quote'].includes(block.type)) {
                 newBlockType = block.type;
             }
 
-            // 3. Create new block with content after cursor
             const newBlock = await createBlock({
                 type: newBlockType,
                 content: contentAfter,
@@ -82,7 +132,6 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
                 properties: block.type === 'todo' ? { checked: false } : undefined,
             });
 
-            // 4. Focus new block at the start
             if (newBlock) {
                 setFocusedBlockId(newBlock.id);
             }
@@ -92,7 +141,6 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
     }, [blocks, updateBlock, createBlock, pageId]);
 
     // R5-R8: Merge with previous block
-    // Called when user presses Backspace at the start of a block
     const handleMergeWithPrevious = useCallback(async (
         currentBlockId: string,
         currentContent: string
@@ -100,13 +148,10 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
         const currentBlock = blocks.find(b => b.id === currentBlockId);
         if (!currentBlock) return;
 
-        // Find previous block by position
         const prevBlock = getBlockAtPosition(currentBlock.position - 1);
-        if (!prevBlock) return; // No previous block to merge with
+        if (!prevBlock) return;
 
-        // Can't merge into dividers
         if (prevBlock.type === 'divider') {
-            // Delete the divider instead and move focus to block before it
             await deleteBlock(prevBlock.id);
             const blockBeforeDivider = getBlockAtPosition(prevBlock.position - 1);
             if (blockBeforeDivider) {
@@ -116,24 +161,12 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
         }
 
         try {
-            // 1. Calculate merge point (end of previous block content)
-            const mergePoint = prevBlock.content.length;
-
-            // 2. Update previous block with merged content
             await updateBlock({
                 id: prevBlock.id,
                 data: { content: prevBlock.content + currentContent }
             });
-
-            // 3. Delete current block
             await deleteBlock(currentBlockId);
-
-            // 4. Focus previous block at merge point
-            // We store the merge point to position cursor correctly
             setFocusedBlockId(prevBlock.id);
-
-            // Return merge info for cursor positioning
-            return { prevBlockId: prevBlock.id, mergePoint };
         } catch (error) {
             console.error('Failed to merge blocks:', error);
         }
@@ -158,25 +191,37 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
                     </Button>
                 </div>
             ) : (
-                <div className="space-y-1">
-                    {blocks.map((block) => (
-                        <BlockRenderer
-                            key={block.id}
-                            block={block}
-                            isFocused={focusedBlockId === block.id}
-                            onFocus={() => setFocusedBlockId(block.id)}
-                            onUpdate={(data) => handleUpdateBlock(block.id, data)}
-                            onDelete={() => handleDeleteBlock(block.id)}
-                            onAddBlock={() => handleCreateBlock(block.position)}
-                            onSplitBlock={(contentBefore, contentAfter) =>
-                                handleSplitBlock(block.id, contentBefore, contentAfter)
-                            }
-                            onMergeWithPrevious={(content) =>
-                                handleMergeWithPrevious(block.id, content)
-                            }
-                        />
-                    ))}
-                </div>
+                // R11: Wrap with DndContext and SortableContext
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={blocks.map(b => b.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="space-y-1">
+                            {blocks.map((block) => (
+                                <BlockRenderer
+                                    key={block.id}
+                                    block={block}
+                                    isFocused={focusedBlockId === block.id}
+                                    onFocus={() => setFocusedBlockId(block.id)}
+                                    onUpdate={(data) => handleUpdateBlock(block.id, data)}
+                                    onDelete={() => handleDeleteBlock(block.id)}
+                                    onAddBlock={() => handleCreateBlock(block.position)}
+                                    onSplitBlock={(contentBefore, contentAfter) =>
+                                        handleSplitBlock(block.id, contentBefore, contentAfter)
+                                    }
+                                    onMergeWithPrevious={(content) =>
+                                        handleMergeWithPrevious(block.id, content)
+                                    }
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {blocks.length > 0 && (
@@ -195,3 +240,4 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
         </div>
     );
 }
+

@@ -2,10 +2,10 @@
  * Creates a debounced function that delays invoking func until after wait
  * milliseconds have elapsed since the last time the debounced function was invoked.
  */
-export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
+export function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
-): T & { cancel: () => void; flush: () => void } {
+): ((...args: Parameters<T>) => void) & { cancel: () => void; flush: () => void } {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let lastArgs: Parameters<T> | null = null;
 
@@ -44,5 +44,7 @@ export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
         }
     };
 
-    return debounced as T & { cancel: () => void; flush: () => void };
+    return debounced;
 }
+
+
