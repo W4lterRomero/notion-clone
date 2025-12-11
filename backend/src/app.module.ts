@@ -12,6 +12,10 @@ import { UsersModule } from './modules/users/users.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 import { PagesModule } from './modules/pages/pages.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
+import { DatabasesModule } from './modules/databases/databases.module';
+import { DatabasePropertiesModule } from './modules/database-properties/database-properties.module';
+import { DatabaseRowsModule } from './modules/database-rows/database-rows.module';
+import { DatabaseViewsModule } from './modules/database-views/database-views.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -30,6 +34,11 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
         WorkspacesModule,
         PagesModule,
         BlocksModule,
+        // Database modules
+        DatabasesModule,
+        DatabasePropertiesModule,
+        DatabaseRowsModule,
+        DatabaseViewsModule,
     ],
     controllers: [],
     providers: [
@@ -40,4 +49,5 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     ],
 })
 export class AppModule { }
+
 
