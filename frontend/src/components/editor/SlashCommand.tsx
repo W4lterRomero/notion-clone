@@ -14,6 +14,7 @@ import {
     Minus,
     Lightbulb,
     ChevronRight,
+    Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -122,6 +123,14 @@ const commands: Command[] = [
         icon: <Lightbulb className="h-5 w-5" />,
         type: "callout",
         keywords: ["callout", "note", "info", "nota"],
+    },
+    {
+        id: "database",
+        title: "Base de Datos",
+        description: "Crear una tabla de datos",
+        icon: <Database className="h-5 w-5" />,
+        type: "database",
+        keywords: ["database", "table", "db", "datos", "tabla"],
     },
 ];
 

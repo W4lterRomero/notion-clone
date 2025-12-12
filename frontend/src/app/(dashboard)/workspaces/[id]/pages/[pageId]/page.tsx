@@ -78,7 +78,7 @@ export default function PageEditorPage() {
                     onIconChange={handleIconChange}
                 />
 
-                <BlockEditor pageId={pageId} />
+                <BlockEditor pageId={pageId} workspaceId={workspaceId} />
             </div>
         </div>
     );

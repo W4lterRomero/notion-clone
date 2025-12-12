@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Block, UpdateBlockInput } from "@/hooks/useBlocks";
 import { cn } from "@/lib/utils";
 import { debounce } from "@/lib/debounce";
+import { parseInlineMarkdown, hasMarkdownSyntax } from "@/lib/markdown";
+import { useCreateDatabase } from "@/hooks/useDatabases";
 import { SlashCommand } from "./SlashCommand";
 
 // R12: @dnd-kit sortable imports
@@ -24,6 +27,10 @@ import {
     Quote,
     Code,
     Minus,
+    ChevronRight,
+    ChevronDown,
+    Lightbulb,
+    AlertCircle,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -34,6 +41,7 @@ import {
 
 interface BlockRendererProps {
     block: Block;
+    workspaceId: string;
     isFocused: boolean;
     onFocus: () => void;
     onUpdate: (data: UpdateBlockInput) => void;
@@ -69,24 +77,55 @@ const blockTypeLabels: Record<string, string> = {
     quote: "Cita",
     code: "Código",
     divider: "Divisor",
+    toggle: "Toggle",
+    callout: "Callout",
 };
 
-// Round 42: Markdown shortcuts detection
-const detectMarkdownShortcut = (text: string): string | null => {
-    if (text === "# ") return "heading1";
-    if (text === "## ") return "heading2";
-    if (text === "### ") return "heading3";
-    if (text === "- " || text === "* ") return "bulleted_list";
-    if (text === "1. ") return "numbered_list";
-    if (text === "[] " || text === "[ ] ") return "todo";
-    if (text === "> ") return "quote";
-    if (text === "``` ") return "code";
-    if (text === "---") return "divider";
+// Placeholders by block type
+const blockPlaceholders: Record<string, string> = {
+    paragraph: "Escribe algo, o presiona '/' para comandos...",
+    heading1: "Encabezado 1",
+    heading2: "Encabezado 2",
+    heading3: "Encabezado 3",
+    bulleted_list: "Elemento de lista",
+    numbered_list: "Elemento de lista",
+    todo: "Tarea pendiente",
+    quote: "Escribe una cita...",
+    code: "// Escribe código aquí...",
+    toggle: "Toggle",
+    callout: "Escribe algo importante...",
+};
+
+// Round 42: Markdown shortcuts detection - returns {type, remainingContent} or null
+const detectMarkdownShortcut = (text: string): { type: string; remaining: string } | null => {
+    // Check for heading shortcuts
+    if (text.startsWith("# ")) return { type: "heading1", remaining: text.slice(2) };
+    if (text.startsWith("## ")) return { type: "heading2", remaining: text.slice(3) };
+    if (text.startsWith("### ")) return { type: "heading3", remaining: text.slice(4) };
+
+    // Check for list shortcuts
+    if (text.startsWith("- ") || text.startsWith("* ")) return { type: "bulleted_list", remaining: text.slice(2) };
+    if (text.startsWith("1. ")) return { type: "numbered_list", remaining: text.slice(3) };
+
+    // Check for todo shortcuts
+    if (text.startsWith("[] ")) return { type: "todo", remaining: text.slice(3) };
+    if (text.startsWith("[ ] ")) return { type: "todo", remaining: text.slice(4) };
+
+    // Check for quote
+    if (text.startsWith("> ")) return { type: "quote", remaining: text.slice(2) };
+
+    // Check for code block
+    if (text.startsWith("``` ") || text.startsWith("```")) return { type: "code", remaining: text.slice(text.startsWith("``` ") ? 4 : 3) };
+
+    // Check for divider (exact match, no content after)
+    if (text === "---" || text === "---\n") return { type: "divider", remaining: "" };
+
     return null;
 };
 
 export function BlockRenderer({
     block,
+    workspaceId,
     isFocused,
     onFocus,
     onUpdate,
@@ -97,6 +136,11 @@ export function BlockRenderer({
 }: BlockRendererProps) {
     const contentRef = useRef<HTMLDivElement>(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [isToggleExpanded, setIsToggleExpanded] = useState(true);
+
+    // Database creation hooks
+    const router = useRouter();
+    const createDatabaseMutation = useCreateDatabase();
 
     // R12: useSortable hook for drag & drop
     const {
@@ -192,21 +236,21 @@ export function BlockRenderer({
         }
 
         // Round 42: Detect markdown shortcuts
-        const shortcutType = detectMarkdownShortcut(newContent);
-        if (shortcutType) {
-            // Clear the content and convert block type
+        const shortcut = detectMarkdownShortcut(newContent);
+        if (shortcut) {
+            // Set the content to remaining text (what was typed after the shortcut)
             if (contentRef.current) {
-                contentRef.current.innerText = "";
+                contentRef.current.innerText = shortcut.remaining;
             }
 
-            if (shortcutType === "todo") {
-                onUpdate({ type: shortcutType, content: "", properties: { checked: false } });
+            if (shortcut.type === "todo") {
+                onUpdate({ type: shortcut.type, content: shortcut.remaining, properties: { checked: false } });
             } else {
-                onUpdate({ type: shortcutType, content: "" });
+                onUpdate({ type: shortcut.type, content: shortcut.remaining });
             }
 
             // For divider, create a new block after
-            if (shortcutType === "divider") {
+            if (shortcut.type === "divider") {
                 setTimeout(() => onAddBlock(), 100);
             }
             return;
@@ -218,7 +262,7 @@ export function BlockRenderer({
 
     // Round 43: Handle slash command selection
     const handleSlashCommandSelect = useCallback(
-        (type: string) => {
+        async (type: string) => {
             if (!contentRef.current) return;
 
             const currentContent = contentRef.current.innerText || "";
@@ -229,6 +273,36 @@ export function BlockRenderer({
             );
 
             contentRef.current.innerText = contentWithoutSlash.trim();
+
+            // Special handling for database type
+            if (type === "database") {
+                setShowSlashMenu(false);
+                setSlashQuery("");
+
+                if (!workspaceId) {
+                    alert("No hay workspace seleccionado");
+                    return;
+                }
+
+                try {
+                    console.log("Creating database with workspaceId:", workspaceId);
+                    const newDatabase = await createDatabaseMutation.mutateAsync({
+                        workspaceId: workspaceId,
+                        title: "Base de datos sin título",
+                        icon: "📊",
+                    });
+                    console.log("Database created:", newDatabase);
+                    // Navigate to the new database
+                    router.push(`/workspaces/${workspaceId}/databases/${newDatabase.id}`);
+                } catch (error: unknown) {
+                    console.error("Error creating database:", error);
+                    const errorMessage = error instanceof Error ? error.message :
+                        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                        "Error desconocido";
+                    alert(`Error al crear la base de datos: ${errorMessage}`);
+                }
+                return;
+            }
 
             if (type === "todo") {
                 onUpdate({
@@ -249,7 +323,7 @@ export function BlockRenderer({
             // Re-focus the block
             setTimeout(() => contentRef.current?.focus(), 10);
         },
-        [onUpdate]
+        [onUpdate, workspaceId, createDatabaseMutation, router]
     );
 
     const handleTypeChange = (newType: string) => {
@@ -462,11 +536,17 @@ export function BlockRenderer({
             case "code":
                 return "font-mono text-sm bg-muted p-3 rounded-md whitespace-pre-wrap";
             case "callout":
-                return "bg-muted/50 p-3 rounded-md border-l-4 border-primary";
+                return "pl-10"; // Content padding for emoji
+            case "toggle":
+                return "pl-7"; // Padding for chevron
             default:
                 return "";
         }
     };
+
+    // Get callout emoji from properties or default
+    const calloutEmoji = block.properties?.emoji || "💡";
+    const calloutColor = block.properties?.color || "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800";
 
     return (
         <div
@@ -480,7 +560,7 @@ export function BlockRenderer({
             {/* Block controls */}
             <div
                 className={cn(
-                    "absolute -left-16 top-0 flex items-center gap-1 opacity-0 transition-opacity",
+                    "absolute -left-16 top-0 flex items-center gap-1 opacity-0 transition-all duration-200",
                     isHovered && "opacity-100"
                 )}
             >
@@ -517,7 +597,7 @@ export function BlockRenderer({
             <button
                 onClick={onDelete}
                 className={cn(
-                    "absolute -right-8 top-0 p-1 rounded hover:bg-destructive/10 opacity-0 transition-opacity",
+                    "absolute -right-8 top-0 p-1 rounded hover:bg-destructive/10 opacity-0 transition-all duration-200",
                     isHovered && "opacity-100"
                 )}
             >
@@ -531,8 +611,29 @@ export function BlockRenderer({
                         type="checkbox"
                         checked={block.properties?.checked ?? false}
                         onChange={handleTodoToggle}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-gray-300 cursor-pointer"
                     />
+                </div>
+            )}
+
+            {/* Toggle chevron */}
+            {block.type === "toggle" && (
+                <button
+                    onClick={() => setIsToggleExpanded(!isToggleExpanded)}
+                    className="absolute left-0 top-0.5 p-0.5 rounded hover:bg-muted transition-transform duration-200"
+                    style={{ transform: isToggleExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
+                >
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+            )}
+
+            {/* Callout emoji */}
+            {block.type === "callout" && (
+                <div className={cn(
+                    "absolute left-0 top-0 w-full h-full rounded-md border -z-10",
+                    calloutColor
+                )}>
+                    <span className="absolute left-3 top-2 text-lg">{calloutEmoji}</span>
                 </div>
             )}
 
@@ -548,16 +649,16 @@ export function BlockRenderer({
                     debouncedUpdate.flush();
                 }}
                 className={cn(
-                    "relative outline-none min-h-[1.5em] py-1 px-1 rounded",
-                    "focus:bg-muted/50",
-                    "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground empty:before:pointer-events-none",
+                    "relative outline-none min-h-[1.5em] py-1 px-1 rounded transition-colors duration-150",
+                    "focus:bg-muted/30",
+                    "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/60 empty:before:pointer-events-none",
                     block.type === "todo" && "pl-7",
                     block.type === "todo" &&
                     block.properties?.checked &&
                     "line-through text-muted-foreground",
                     getBlockStyles()
                 )}
-                data-placeholder="Escribe algo o presiona '/' para comandos..."
+                data-placeholder={blockPlaceholders[block.type] || "Escribe algo..."}
             />
 
             {/* Round 43: Slash Command Menu */}

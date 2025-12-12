@@ -24,9 +24,10 @@ import {
 
 interface BlockEditorProps {
     pageId: string;
+    workspaceId: string;
 }
 
-export function BlockEditor({ pageId }: BlockEditorProps) {
+export function BlockEditor({ pageId, workspaceId }: BlockEditorProps) {
     const { blocks, isLoading, createBlock, updateBlock, deleteBlock, reorderBlocks } = useBlocks(pageId);
     const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
 
@@ -206,6 +207,7 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
                                 <BlockRenderer
                                     key={block.id}
                                     block={block}
+                                    workspaceId={workspaceId}
                                     isFocused={focusedBlockId === block.id}
                                     onFocus={() => setFocusedBlockId(block.id)}
                                     onUpdate={(data) => handleUpdateBlock(block.id, data)}
