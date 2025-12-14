@@ -41,6 +41,21 @@ export class WorkspacesController {
         return this.workspacesService.findOne(id, user);
     }
 
+    @Get(':id/members')
+    async getMembers(@Param('id') id: string, @CurrentUser() user: User) {
+        const workspace = await this.workspacesService.findOne(id, user);
+        // Return owner as the only member for now
+        // In the future, this could return all members of the workspace
+        if (workspace.owner) {
+            return [{
+                id: workspace.owner.id,
+                name: workspace.owner.name || '',
+                email: workspace.owner.email,
+            }];
+        }
+        return [];
+    }
+
     @Patch(':id')
     update(
         @Param('id') id: string,
