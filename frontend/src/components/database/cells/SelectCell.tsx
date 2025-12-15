@@ -5,7 +5,9 @@ import { ChevronDown, Plus, X } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateRowValue } from '@/hooks/useDatabaseRows'
 import { useUpdateProperty } from '@/hooks/useDatabaseProperties'
-import { v4 as uuidv4 } from 'uuid'
+
+// Use native crypto.randomUUID instead of uuid package
+const generateId = () => crypto.randomUUID()
 
 // Color palette for select options
 export const OPTION_COLORS: Record<string, { bg: string; text: string }> = {
@@ -77,7 +79,7 @@ export default function SelectCell({
         if (!newOptionName.trim()) return
 
         const newOption: SelectOption = {
-            id: uuidv4(),
+            id: generateId(),
             name: newOptionName.trim(),
             color: Object.keys(OPTION_COLORS)[options.length % 8], // Cycle colors
         }

@@ -5,7 +5,9 @@ import { X, Plus, Trash2 } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateProperty } from '@/hooks/useDatabaseProperties'
 import { OPTION_COLORS, SelectOption } from './cells/SelectCell'
-import { v4 as uuidv4 } from 'uuid'
+
+// Use native crypto.randomUUID instead of uuid package
+const generateId = () => crypto.randomUUID()
 
 interface PropertyConfigModalProps {
     isOpen: boolean
@@ -35,7 +37,7 @@ export default function PropertyConfigModal({
         if (!newOptionName.trim()) return
 
         const newOption: SelectOption = {
-            id: uuidv4(),
+            id: generateId(),
             name: newOptionName.trim(),
             color: selectedColor,
         }

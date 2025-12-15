@@ -51,17 +51,17 @@ export default function PropertyHeader({
     const [selectedType, setSelectedType] = useState<PropertyType>('text')
     const createPropertyMutation = useCreateProperty()
 
-    const handleCreateProperty = async () => {
+    const handleCreateProperty = async (type: PropertyType) => {
         if (!newPropertyName.trim()) return
 
-        const config = selectedType === 'select' || selectedType === 'multi_select'
+        const config = type === 'select' || type === 'multi_select'
             ? { options: [] }
             : {}
 
         await createPropertyMutation.mutateAsync({
             databaseId,
             name: newPropertyName,
-            type: selectedType,
+            type: type,
             config,
         })
 
@@ -102,8 +102,7 @@ export default function PropertyHeader({
                                         className={`px-3 py-2 cursor-pointer hover:bg-muted flex items-center gap-2 text-sm ${selectedType === pt.type ? 'bg-muted' : ''
                                             }`}
                                         onClick={() => {
-                                            setSelectedType(pt.type)
-                                            handleCreateProperty()
+                                            handleCreateProperty(pt.type)
                                         }}
                                     >
                                         <span className="text-muted-foreground">
