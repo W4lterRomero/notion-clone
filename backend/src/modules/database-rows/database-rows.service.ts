@@ -99,7 +99,7 @@ export class DatabaseRowsService {
         // Attach values to rows
         return rows.map((row) => ({
             ...row,
-            values: valuesByRow.get(row.id) || [],
+            propertyValues: valuesByRow.get(row.id) || [],
         }));
     }
 
@@ -132,7 +132,7 @@ export class DatabaseRowsService {
 
         return {
             ...row,
-            values: valuesWithProperties,
+            propertyValues: valuesWithProperties,
         };
     }
 

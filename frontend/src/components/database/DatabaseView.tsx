@@ -47,7 +47,7 @@ export default function DatabaseView({ databaseId }: DatabaseViewProps) {
             </div>
 
             {/* Table View */}
-            <TableView databaseId={databaseId} />
+            <TableView databaseId={databaseId} workspaceId={database.workspaceId} />
         </div>
     )
 }

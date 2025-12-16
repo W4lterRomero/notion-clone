@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import { User, X } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateRowValue } from '@/hooks/useDatabaseRows'
-import { useWorkspaceMembers, WorkspaceMember } from '@/hooks/useWorkspaceMembers'
-import { useParams } from 'next/navigation'
+import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers'
 
 interface PersonCellProps {
     databaseId: string
+    workspaceId: string
     rowId: string
     property: DatabaseProperty
     value: string[] | null
@@ -25,14 +25,13 @@ function getInitials(name: string): string {
 
 export default function PersonCell({
     databaseId,
+    workspaceId,
     rowId,
     property,
     value,
 }: PersonCellProps) {
     const [isOpen, setIsOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
-    const params = useParams()
-    const workspaceId = params?.id as string
 
     const { data: members = [] } = useWorkspaceMembers(workspaceId)
     const updateValueMutation = useUpdateRowValue()

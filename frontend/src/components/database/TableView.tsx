@@ -8,9 +8,10 @@ import { Plus, Loader2 } from 'lucide-react'
 
 interface TableViewProps {
     databaseId: string
+    workspaceId: string
 }
 
-export default function TableView({ databaseId }: TableViewProps) {
+export default function TableView({ databaseId, workspaceId }: TableViewProps) {
     const { data: properties, isLoading: loadingProps } = useDatabaseProperties(databaseId)
     const { data: rows, isLoading: loadingRows } = useDatabaseRows(databaseId)
     const createRowMutation = useCreateRow()
@@ -74,6 +75,7 @@ export default function TableView({ databaseId }: TableViewProps) {
                                     <td key={property.id} className="p-0">
                                         <PropertyCell
                                             databaseId={databaseId}
+                                            workspaceId={workspaceId}
                                             rowId={row.id}
                                             property={property}
                                             value={cellValue}

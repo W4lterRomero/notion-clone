@@ -11,15 +11,22 @@ import MultiSelectCell from './cells/MultiSelectCell'
 import DateCell from './cells/DateCell'
 import PersonCell from './cells/PersonCell'
 
-interface PropertyCellProps {
+// Base props for simple cell components
+interface BaseCellProps {
     databaseId: string
     rowId: string
     property: DatabaseProperty
     value: unknown
 }
 
+// Extended props for PropertyCell (includes workspaceId for PersonCell)
+interface PropertyCellProps extends BaseCellProps {
+    workspaceId: string
+}
+
 export default function PropertyCell({
     databaseId,
+    workspaceId,
     rowId,
     property,
     value,
@@ -60,6 +67,7 @@ export default function PropertyCell({
             return (
                 <PersonCell
                     databaseId={databaseId}
+                    workspaceId={workspaceId}
                     rowId={rowId}
                     property={property}
                     value={value as string[] | null}
@@ -109,7 +117,7 @@ function CheckboxCell({
     rowId,
     property,
     value,
-}: PropertyCellProps) {
+}: BaseCellProps) {
     const updateValueMutation = useUpdateRowValue()
     const isChecked = value === true || value === 'true'
 
@@ -139,7 +147,7 @@ function TextCell({
     rowId,
     property,
     value,
-}: PropertyCellProps) {
+}: BaseCellProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [localValue, setLocalValue] = useState<string>(String(value ?? ''))
     const updateValueMutation = useUpdateRowValue()
@@ -210,7 +218,7 @@ function LinkCell({
     rowId,
     property,
     value,
-}: PropertyCellProps) {
+}: BaseCellProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [localValue, setLocalValue] = useState<string>(String(value ?? ''))
     const updateValueMutation = useUpdateRowValue()
