@@ -65,7 +65,7 @@ async function fetchViews(databaseId: string): Promise<DatabaseView[]> {
 
 async function createView(
     databaseId: string,
-    data: { name: string; type: string; config?: TableViewConfig }
+    data: { name: string; type: string; config?: Record<string, unknown> }
 ): Promise<DatabaseView> {
     const response = await axios.post(
         `${API_URL}/databases/${databaseId}/views`,
@@ -115,7 +115,7 @@ export function useCreateView() {
             databaseId: string
             name: string
             type: string
-            config?: TableViewConfig
+            config?: Record<string, unknown>
         }) => createView(databaseId, { name, type, config }),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({
