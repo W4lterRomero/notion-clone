@@ -62,9 +62,15 @@ export default function PropertyHeader({
     const handleCreateProperty = async (type: PropertyType) => {
         if (!newPropertyName.trim()) return
 
-        const config = type === 'select' || type === 'multi_select'
-            ? { options: [] }
-            : {}
+        // Set appropriate default config based on type
+        let config: Record<string, unknown> = {}
+        if (type === 'select' || type === 'multi_select') {
+            config = { options: [] }
+        } else if (type === 'relation') {
+            config = { databaseId: '', type: 'many_to_many' }
+        } else if (type === 'rollup') {
+            config = { relationPropertyId: '', rollupPropertyId: '', function: 'count' }
+        }
 
         await createPropertyMutation.mutateAsync({
             databaseId,
