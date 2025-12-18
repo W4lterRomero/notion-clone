@@ -6,6 +6,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOf
 import { es } from 'date-fns/locale'
 import { useDatabaseProperties } from '@/hooks/useDatabaseProperties'
 import { useDatabaseRows } from '@/hooks/useDatabaseRows'
+import { useDatabaseViews, useUpdateView } from '@/hooks/useDatabaseViews'
 import CalendarDayCell from './CalendarDayCell'
 import { ChevronLeft, ChevronRight, Settings, Loader2 } from 'lucide-react'
 
@@ -22,6 +23,8 @@ interface CalendarViewProps {
 export default function CalendarView({ databaseId, workspaceId, viewConfig }: CalendarViewProps) {
     const { data: properties, isLoading: loadingProps } = useDatabaseProperties(databaseId)
     const { data: rows, isLoading: loadingRows } = useDatabaseRows(databaseId)
+    const { data: views } = useDatabaseViews(databaseId)
+    const updateViewMutation = useUpdateView()
 
     const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -59,6 +62,23 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
         return grouped
     }, [dateProperty, rows])
 
+    // Handler to select date property for calendar
+    const selectDateProperty = async (propertyId: string) => {
+        // Find the calendar view that uses this viewConfig
+        const calendarView = views?.find(v => v.type === 'calendar')
+        if (!calendarView) return
+
+        await updateViewMutation.mutateAsync({
+            databaseId,
+            viewId: calendarView.id,
+            config: {
+                ...(calendarView.config as Record<string, unknown>),
+                dateProperty: propertyId,
+                showWeekends: viewConfig.showWeekends ?? true,
+            } as Record<string, unknown>,
+        })
+    }
+
     const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
     const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
     const goToToday = () => setCurrentMonth(new Date())
@@ -89,6 +109,7 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
                         {dateProperties.map(prop => (
                             <button
                                 key={prop.id}
+                                onClick={() => selectDateProperty(prop.id)}
                                 className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                             >
                                 {prop.name}

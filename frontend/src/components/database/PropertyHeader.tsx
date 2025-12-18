@@ -108,12 +108,24 @@ export default function PropertyHeader({
                                     setNewPropertyName('')
                                 }
                             }}
+                            onBlur={(e) => {
+                                // Don't close if clicking on type selector
+                                const relatedTarget = e.relatedTarget as HTMLElement
+                                if (relatedTarget?.closest?.('.property-type-selector')) return
+                                // Delay to allow type selection click to register
+                                setTimeout(() => {
+                                    if (!isSelectingType) {
+                                        setIsCreating(false)
+                                        setNewPropertyName('')
+                                    }
+                                }, 150)
+                            }}
                             className="w-full px-2 py-1 text-sm border rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                             placeholder="Nombre de propiedad"
                             autoFocus
                         />
                         {isSelectingType && newPropertyName.trim() && (
-                            <div className="absolute z-50 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto w-48">
+                            <div className="property-type-selector absolute z-50 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto w-48">
                                 {propertyTypes.map((pt) => (
                                     <div
                                         key={pt.type}
