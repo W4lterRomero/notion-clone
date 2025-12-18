@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { DatabaseRelation } from './entities/database-relation.entity';
 import { Page } from '../pages/entities/page.entity';
+import { DatabaseProperty, PropertyType } from '../database-properties/entities/database-property.entity';
 
 @Injectable()
 export class DatabaseRelationsService {
@@ -11,6 +12,8 @@ export class DatabaseRelationsService {
         private relationRepository: Repository<DatabaseRelation>,
         @InjectRepository(Page)
         private pageRepository: Repository<Page>,
+        @InjectRepository(DatabaseProperty)
+        private propertyRepository: Repository<DatabaseProperty>,
     ) { }
 
     /**
@@ -22,6 +25,53 @@ export class DatabaseRelationsService {
         propertyId: string,
         targetRowIds: string[],
     ): Promise<DatabaseRelation[]> {
+        // Validate source row exists
+        const sourceRow = await this.pageRepository.findOne({
+            where: { id: sourceRowId },
+        });
+        if (!sourceRow) {
+            throw new NotFoundException(`Source row with ID ${sourceRowId} not found`);
+        }
+
+        // Validate property exists and is of type RELATION
+        const property = await this.propertyRepository.findOne({
+            where: { id: propertyId },
+        });
+        if (!property) {
+            throw new NotFoundException(`Property with ID ${propertyId} not found`);
+        }
+        if (property.type !== PropertyType.RELATION) {
+            throw new BadRequestException(`Property ${property.name} is not a relation property`);
+        }
+
+        // Get the related database ID from property config
+        const config = property.config as { databaseId?: string };
+        if (!config?.databaseId) {
+            throw new BadRequestException(`Relation property ${property.name} is not configured with a target database`);
+        }
+
+        // Validate target rows exist in the related database
+        if (targetRowIds.length > 0) {
+            const uniqueTargetIds = [...new Set(targetRowIds)]; // Remove duplicates
+            const targetRows = await this.pageRepository.find({
+                where: { id: In(uniqueTargetIds) },
+            });
+
+            if (targetRows.length !== uniqueTargetIds.length) {
+                const foundIds = new Set(targetRows.map(r => r.id));
+                const missingIds = uniqueTargetIds.filter(id => !foundIds.has(id));
+                throw new NotFoundException(`Target rows not found: ${missingIds.join(', ')}`);
+            }
+
+            // Verify target rows belong to the correct database
+            const invalidTargets = targetRows.filter(r => r.parentDatabaseId !== config.databaseId);
+            if (invalidTargets.length > 0) {
+                throw new BadRequestException(
+                    `Some target rows do not belong to the related database: ${invalidTargets.map(r => r.title || r.id).join(', ')}`
+                );
+            }
+        }
+
         // Delete existing relations for this source row and property
         await this.relationRepository.delete({
             sourceRowId,
@@ -32,8 +82,9 @@ export class DatabaseRelationsService {
             return [];
         }
 
-        // Create new relations
-        const relations = targetRowIds.map((targetRowId) =>
+        // Create new relations (use unique IDs)
+        const uniqueIds = [...new Set(targetRowIds)];
+        const relations = uniqueIds.map((targetRowId) =>
             this.relationRepository.create({
                 sourceRowId,
                 targetRowId,
