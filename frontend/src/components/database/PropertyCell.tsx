@@ -10,6 +10,8 @@ import SelectCell from './cells/SelectCell'
 import MultiSelectCell from './cells/MultiSelectCell'
 import DateCell from './cells/DateCell'
 import PersonCell from './cells/PersonCell'
+import RelationCell from './cells/RelationCell'
+import RollupCell from './cells/RollupCell'
 
 // Base props for simple cell components
 interface BaseCellProps {
@@ -17,11 +19,13 @@ interface BaseCellProps {
     rowId: string
     property: DatabaseProperty
     value: unknown
+    relatedRows?: { id: string; title: string; icon: string | null }[]
 }
 
-// Extended props for PropertyCell (includes workspaceId for PersonCell)
+// Extended props for PropertyCell (includes workspaceId for PersonCell and RelationCell)
 interface PropertyCellProps extends BaseCellProps {
     workspaceId: string
+    relatedRows?: { id: string; title: string; icon: string | null }[]
 }
 
 export default function PropertyCell({
@@ -30,6 +34,7 @@ export default function PropertyCell({
     rowId,
     property,
     value,
+    relatedRows,
 }: PropertyCellProps) {
     // Route to specific cell component based on type
     switch (property.type) {
@@ -92,6 +97,28 @@ export default function PropertyCell({
                     rowId={rowId}
                     property={property}
                     value={value}
+                />
+            )
+
+        case 'relation':
+            return (
+                <RelationCell
+                    databaseId={databaseId}
+                    workspaceId={workspaceId}
+                    rowId={rowId}
+                    property={property}
+                    value={value as string[] | null}
+                    relatedRows={relatedRows}
+                />
+            )
+
+        case 'rollup':
+            return (
+                <RollupCell
+                    databaseId={databaseId}
+                    rowId={rowId}
+                    property={property}
+                    value={value as number | string | null}
                 />
             )
 

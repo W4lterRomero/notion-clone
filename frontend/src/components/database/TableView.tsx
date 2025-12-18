@@ -46,7 +46,12 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
                     <tr>
                         {sortedProperties.map((property) => (
                             <th key={property.id} className="text-left p-0">
-                                <PropertyHeader databaseId={databaseId} property={property} />
+                                <PropertyHeader
+                                    databaseId={databaseId}
+                                    property={property}
+                                    workspaceId={workspaceId}
+                                    allProperties={properties || []}
+                                />
                             </th>
                         ))}
                         <th className="text-left p-0">
@@ -71,6 +76,9 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
                                     cellValue = row.title
                                 }
 
+                                // Get relatedRows for relation properties
+                                const relatedRows = (propertyValue as { relatedRows?: { id: string; title: string; icon: string | null }[] })?.relatedRows
+
                                 return (
                                     <td key={property.id} className="p-0">
                                         <PropertyCell
@@ -79,6 +87,7 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
                                             rowId={row.id}
                                             property={property}
                                             value={cellValue}
+                                            relatedRows={relatedRows}
                                         />
                                     </td>
                                 )

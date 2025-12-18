@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Page, PageType } from '../pages/entities/page.entity';
 import { DatabasePropertyValue } from '../database-property-values/entities/database-property-value.entity';
-import { DatabaseProperty, PropertyType } from '../database-properties/entities/database-property.entity';
+import { DatabaseProperty, PropertyType, RelationConfig, RollupConfig } from '../database-properties/entities/database-property.entity';
+import { DatabaseRelationsService } from '../database-relations/database-relations.service';
 import { CreateRowDto } from './dto/create-row.dto';
 import { UpdateRowValueDto } from './dto/update-row-value.dto';
 
@@ -16,6 +17,7 @@ export class DatabaseRowsService {
         private propertyValueRepository: Repository<DatabasePropertyValue>,
         @InjectRepository(DatabaseProperty)
         private propertyRepository: Repository<DatabaseProperty>,
+        private relationsService: DatabaseRelationsService,
     ) { }
 
     async create(databaseId: string, createRowDto: CreateRowDto, userId: string) {
@@ -83,6 +85,22 @@ export class DatabaseRowsService {
 
         const propertiesMap = new Map(properties.map(p => [p.id, p]));
 
+        // Get relations for all rows at once
+        const relationsMap = await this.relationsService.getRelationsForRows(rowIds);
+
+        // Collect all target row IDs to fetch their details
+        const allTargetRowIds = new Set<string>();
+        for (const rowRelations of relationsMap.values()) {
+            for (const targetIds of rowRelations.values()) {
+                targetIds.forEach(id => allTargetRowIds.add(id));
+            }
+        }
+
+        // Get related row details for display
+        const relatedRowDetails = await this.relationsService.getRelatedRowDetails(
+            Array.from(allTargetRowIds),
+        );
+
         // Group values by row
         const valuesByRow = new Map<string, any[]>();
         for (const value of values) {
@@ -96,11 +114,111 @@ export class DatabaseRowsService {
             });
         }
 
-        // Attach values to rows
-        return rows.map((row) => ({
-            ...row,
-            propertyValues: valuesByRow.get(row.id) || [],
-        }));
+        // Calculate rollups
+        const rollupProperties = properties.filter(p => p.type === PropertyType.ROLLUP);
+
+        // Attach values to rows with relation and rollup data
+        return rows.map((row) => {
+            const rowPropertyValues = valuesByRow.get(row.id) || [];
+            const rowRelations = relationsMap.get(row.id) || new Map();
+
+            // Add relation property values with related row details
+            for (const property of properties) {
+                if (property.type === PropertyType.RELATION) {
+                    const targetRowIds = rowRelations.get(property.id) || [];
+                    const relatedRows = targetRowIds
+                        .map((id: string) => relatedRowDetails.get(id))
+                        .filter(Boolean);
+
+                    rowPropertyValues.push({
+                        propertyId: property.id,
+                        rowId: row.id,
+                        value: targetRowIds,
+                        relatedRows,
+                        property,
+                    });
+                }
+            }
+
+            // Calculate rollup values
+            for (const rollupProp of rollupProperties) {
+                const rollupConfig = rollupProp.config as RollupConfig;
+                const rollupValue = this.calculateRollupValue(
+                    rollupConfig,
+                    rowRelations,
+                    propertiesMap,
+                    valuesByRow,
+                );
+                rowPropertyValues.push({
+                    propertyId: rollupProp.id,
+                    rowId: row.id,
+                    value: rollupValue,
+                    property: rollupProp,
+                });
+            }
+
+            return {
+                ...row,
+                propertyValues: rowPropertyValues,
+            };
+        });
+    }
+
+    private calculateRollupValue(
+        config: RollupConfig,
+        rowRelations: Map<string, string[]>,
+        propertiesMap: Map<string, DatabaseProperty>,
+        valuesByRow: Map<string, any[]>,
+    ): number | string | null {
+        if (!config.relationPropertyId || !config.rollupPropertyId) {
+            return null;
+        }
+
+        const relatedRowIds = rowRelations.get(config.relationPropertyId) || [];
+        if (relatedRowIds.length === 0) {
+            return config.function === 'count' ? 0 : null;
+        }
+
+        const rollupProperty = propertiesMap.get(config.rollupPropertyId);
+        if (!rollupProperty) {
+            return null;
+        }
+
+        // For count, just return the number of related rows
+        if (config.function === 'count') {
+            return relatedRowIds.length;
+        }
+
+        // For other functions, get the values from related rows
+        const values: number[] = [];
+        for (const relatedRowId of relatedRowIds) {
+            const rowValues = valuesByRow.get(relatedRowId) || [];
+            const propValue = rowValues.find(v => v.propertyId === config.rollupPropertyId);
+            if (propValue && typeof propValue.value === 'number') {
+                values.push(propValue.value);
+            } else if (propValue && !isNaN(Number(propValue.value))) {
+                values.push(Number(propValue.value));
+            }
+        }
+
+        if (values.length === 0) {
+            return null;
+        }
+
+        switch (config.function) {
+            case 'sum':
+                return values.reduce((a, b) => a + b, 0);
+            case 'average':
+                return values.reduce((a, b) => a + b, 0) / values.length;
+            case 'min':
+                return Math.min(...values);
+            case 'max':
+                return Math.max(...values);
+            case 'range':
+                return Math.max(...values) - Math.min(...values);
+            default:
+                return values.join(', ');
+        }
     }
 
     async findOne(databaseId: string, rowId: string, userId: string) {

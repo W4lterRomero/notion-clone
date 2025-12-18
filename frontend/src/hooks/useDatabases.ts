@@ -39,6 +39,8 @@ export type PropertyType =
     | 'url'
     | 'email'
     | 'phone'
+    | 'relation'
+    | 'rollup'
 
 export interface DatabaseView {
     id: string

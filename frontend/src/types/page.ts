@@ -5,6 +5,7 @@ export interface Page {
     title: string;
     icon?: string;
     cover?: string;
+    type?: 'page' | 'database';
     isPublic: boolean;
     workspaceId: string;
     workspace?: Workspace;

@@ -10,6 +10,8 @@ interface PropertyHeaderProps {
     databaseId: string
     property?: DatabaseProperty
     isAddButton?: boolean
+    workspaceId?: string
+    allProperties?: DatabaseProperty[]
 }
 
 const propertyTypeIcons: Record<PropertyType, React.ReactNode> = {
@@ -24,6 +26,8 @@ const propertyTypeIcons: Record<PropertyType, React.ReactNode> = {
     url: <Link size={14} />,
     email: <AtSign size={14} />,
     phone: <Phone size={14} />,
+    relation: <Link size={14} />,
+    rollup: <Hash size={14} />,
 }
 
 const propertyTypes: { type: PropertyType; label: string }[] = [
@@ -37,12 +41,16 @@ const propertyTypes: { type: PropertyType; label: string }[] = [
     { type: 'url', label: 'URL' },
     { type: 'email', label: 'Email' },
     { type: 'phone', label: 'Teléfono' },
+    { type: 'relation', label: 'Relación' },
+    { type: 'rollup', label: 'Rollup' },
 ]
 
 export default function PropertyHeader({
     databaseId,
     property,
     isAddButton,
+    workspaceId = '',
+    allProperties = [],
 }: PropertyHeaderProps) {
     const [isCreating, setIsCreating] = useState(false)
     const [isSelectingType, setIsSelectingType] = useState(false)
@@ -129,7 +137,7 @@ export default function PropertyHeader({
 
     if (!property) return null
 
-    const canConfigure = property.type === 'select' || property.type === 'multi_select'
+    const canConfigure = property.type === 'select' || property.type === 'multi_select' || property.type === 'relation' || property.type === 'rollup'
 
     return (
         <>
@@ -159,6 +167,8 @@ export default function PropertyHeader({
                     onClose={() => setIsConfigOpen(false)}
                     databaseId={databaseId}
                     property={property}
+                    workspaceId={workspaceId}
+                    allProperties={allProperties}
                 />
             )}
         </>
