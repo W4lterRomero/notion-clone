@@ -41,6 +41,7 @@ export type PropertyType =
     | 'phone'
     | 'relation'
     | 'rollup'
+    | 'formula'
 
 export interface DatabaseView {
     id: string

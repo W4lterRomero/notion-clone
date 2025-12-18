@@ -7,6 +7,7 @@ import { DatabasePropertyValue } from '../database-property-values/entities/data
 import { DatabaseProperty } from '../database-properties/entities/database-property.entity';
 import { DatabaseRelationsModule } from '../database-relations/database-relations.module';
 import { DatabaseRelation } from '../database-relations/entities/database-relation.entity';
+import { FormulaEvaluatorService } from './formula-evaluator.service';
 
 @Module({
     imports: [
@@ -14,7 +15,8 @@ import { DatabaseRelation } from '../database-relations/entities/database-relati
         DatabaseRelationsModule,
     ],
     controllers: [DatabaseRowsController],
-    providers: [DatabaseRowsService],
-    exports: [DatabaseRowsService],
+    providers: [DatabaseRowsService, FormulaEvaluatorService],
+    exports: [DatabaseRowsService, FormulaEvaluatorService],
 })
 export class DatabaseRowsModule { }
+

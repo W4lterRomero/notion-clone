@@ -3,10 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Page, PageType } from '../pages/entities/page.entity';
 import { DatabasePropertyValue } from '../database-property-values/entities/database-property-value.entity';
-import { DatabaseProperty, PropertyType, RelationConfig, RollupConfig } from '../database-properties/entities/database-property.entity';
+import { DatabaseProperty, PropertyType, RelationConfig, RollupConfig, FormulaConfig } from '../database-properties/entities/database-property.entity';
 import { DatabaseRelationsService } from '../database-relations/database-relations.service';
 import { CreateRowDto } from './dto/create-row.dto';
 import { UpdateRowValueDto } from './dto/update-row-value.dto';
+import { FormulaEvaluatorService, FormulaContext } from './formula-evaluator.service';
 
 @Injectable()
 export class DatabaseRowsService {
@@ -18,6 +19,7 @@ export class DatabaseRowsService {
         @InjectRepository(DatabaseProperty)
         private propertyRepository: Repository<DatabaseProperty>,
         private relationsService: DatabaseRelationsService,
+        private formulaEvaluator: FormulaEvaluatorService,
     ) { }
 
     async create(databaseId: string, createRowDto: CreateRowDto, userId: string) {
@@ -155,6 +157,41 @@ export class DatabaseRowsService {
                     value: rollupValue,
                     property: rollupProp,
                 });
+            }
+
+            // Calculate formula values
+            const formulaProperties = properties.filter(p => p.type === PropertyType.FORMULA);
+            for (const formulaProp of formulaProperties) {
+                const formulaConfig = formulaProp.config as FormulaConfig;
+                if (formulaConfig?.expression) {
+                    // Build formula context from existing property values
+                    const context: FormulaContext = {
+                        rowId: row.id,
+                        properties: new Map(),
+                    };
+
+                    // Add all property values to context
+                    for (const pv of rowPropertyValues) {
+                        const prop = propertiesMap.get(pv.propertyId);
+                        if (prop) {
+                            context.properties.set(prop.id, {
+                                name: prop.name,
+                                type: prop.type,
+                                value: pv.value,
+                            });
+                        }
+                    }
+
+                    // Evaluate formula
+                    const result = this.formulaEvaluator.evaluate(formulaConfig.expression, context);
+                    rowPropertyValues.push({
+                        propertyId: formulaProp.id,
+                        rowId: row.id,
+                        value: result.value,
+                        formulaResult: result,
+                        property: formulaProp,
+                    });
+                }
             }
 
             return {

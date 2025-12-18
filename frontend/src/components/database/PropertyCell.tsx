@@ -12,6 +12,7 @@ import DateCell from './cells/DateCell'
 import PersonCell from './cells/PersonCell'
 import RelationCell from './cells/RelationCell'
 import RollupCell from './cells/RollupCell'
+import FormulaCell from './cells/FormulaCell'
 
 // Base props for simple cell components
 interface BaseCellProps {
@@ -119,6 +120,16 @@ export default function PropertyCell({
                     rowId={rowId}
                     property={property}
                     value={value as number | string | null}
+                />
+            )
+
+        case 'formula':
+            return (
+                <FormulaCell
+                    databaseId={databaseId}
+                    rowId={rowId}
+                    property={property}
+                    value={value}
                 />
             )
 

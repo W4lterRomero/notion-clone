@@ -28,6 +28,7 @@ const propertyTypeIcons: Record<PropertyType, React.ReactNode> = {
     phone: <Phone size={14} />,
     relation: <Link size={14} />,
     rollup: <Hash size={14} />,
+    formula: <Hash size={14} />,
 }
 
 const propertyTypes: { type: PropertyType; label: string }[] = [
@@ -43,6 +44,7 @@ const propertyTypes: { type: PropertyType; label: string }[] = [
     { type: 'phone', label: 'Teléfono' },
     { type: 'relation', label: 'Relación' },
     { type: 'rollup', label: 'Rollup' },
+    { type: 'formula', label: 'Fórmula' },
 ]
 
 export default function PropertyHeader({
@@ -70,6 +72,8 @@ export default function PropertyHeader({
             config = { databaseId: '', type: 'many_to_many' }
         } else if (type === 'rollup') {
             config = { relationPropertyId: '', rollupPropertyId: '', function: 'count' }
+        } else if (type === 'formula') {
+            config = { expression: '' }
         }
 
         await createPropertyMutation.mutateAsync({

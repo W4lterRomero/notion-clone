@@ -62,6 +62,11 @@ export default function PropertyConfigModal({
     const [selectedRollupPropertyId, setSelectedRollupPropertyId] = useState(rollupConfig?.rollupPropertyId || '')
     const [selectedRollupFunction, setSelectedRollupFunction] = useState(rollupConfig?.function || 'count')
 
+    // Formula config state
+    const formulaConfig = property.config as { expression?: string }
+    const [formulaExpression, setFormulaExpression] = useState(formulaConfig?.expression || '')
+    const [showFormulaHelp, setShowFormulaHelp] = useState(false)
+
     // Get relation properties for rollup config
     const relationProperties = allProperties.filter(p => p.type === 'relation')
 
@@ -81,6 +86,10 @@ export default function PropertyConfigModal({
         setSelectedRollupPropertyId(rollupConfig?.rollupPropertyId || '')
         setSelectedRollupFunction(rollupConfig?.function || 'count')
     }, [rollupConfig?.relationPropertyId, rollupConfig?.rollupPropertyId, rollupConfig?.function])
+
+    useEffect(() => {
+        setFormulaExpression(formulaConfig?.expression || '')
+    }, [formulaConfig?.expression])
 
     if (!isOpen) return null
 
@@ -266,6 +275,95 @@ export default function PropertyConfigModal({
         </div>
     )
 
+    const renderFormulaConfig = () => {
+        const handleSaveExpression = async () => {
+            await updatePropertyMutation.mutateAsync({
+                databaseId,
+                propertyId: property.id,
+                config: { expression: formulaExpression },
+            })
+        }
+
+        const insertReference = (propName: string) => {
+            const propRef = `prop("${propName}")`
+            setFormulaExpression(prev => prev + propRef)
+        }
+
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-purple-600 mb-2">
+                    <span className="text-lg font-mono font-bold">ƒ</span>
+                    <span className="font-medium">Configuración de Fórmula</span>
+                </div>
+
+                {/* Expression Editor */}
+                <div>
+                    <label className="block text-sm font-medium mb-2">
+                        Expresión
+                    </label>
+                    <textarea
+                        value={formulaExpression}
+                        onChange={(e) => setFormulaExpression(e.target.value)}
+                        onBlur={handleSaveExpression}
+                        placeholder='Ejemplo: prop("Precio") * prop("Cantidad")'
+                        className="w-full px-3 py-2 text-sm font-mono border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] resize-y"
+                    />
+                </div>
+
+                {/* Property Reference Helper */}
+                <div>
+                    <label className="block text-sm font-medium mb-2">
+                        Insertar referencia a propiedad
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                        {allProperties
+                            .filter(p => p.type !== 'formula' && p.id !== property.id)
+                            .map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => insertReference(p.name)}
+                                    className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
+                                >
+                                    {p.name}
+                                </button>
+                            ))}
+                    </div>
+                </div>
+
+                {/* Help Toggle */}
+                <div>
+                    <button
+                        onClick={() => setShowFormulaHelp(!showFormulaHelp)}
+                        className="text-sm text-primary hover:underline"
+                    >
+                        {showFormulaHelp ? 'Ocultar ayuda' : 'Mostrar funciones disponibles'}
+                    </button>
+
+                    {showFormulaHelp && (
+                        <div className="mt-2 p-3 bg-muted/50 rounded-lg text-xs space-y-2 max-h-48 overflow-y-auto">
+                            <div>
+                                <strong className="block text-primary">Matemáticas:</strong>
+                                <code>+ - * /</code>, <code>round()</code>, <code>abs()</code>, <code>min()</code>, <code>max()</code>, <code>sum()</code>, <code>pow()</code>
+                            </div>
+                            <div>
+                                <strong className="block text-green-600">Texto:</strong>
+                                <code>concat()</code>, <code>length()</code>, <code>upper()</code>, <code>lower()</code>, <code>trim()</code>, <code>replace()</code>
+                            </div>
+                            <div>
+                                <strong className="block text-blue-600">Lógica:</strong>
+                                <code>if(cond, si, no)</code>, <code>and()</code>, <code>or()</code>, <code>equal()</code>
+                            </div>
+                            <div>
+                                <strong className="block text-purple-600">Fecha:</strong>
+                                <code>now()</code>, <code>today()</code>, <code>dateDiff()</code>, <code>dateAdd()</code>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
     const renderSelectConfig = () => (
         <>
             <p className="text-sm text-muted-foreground mb-4">
@@ -370,6 +468,8 @@ export default function PropertyConfigModal({
                 return renderRelationConfig()
             case 'rollup':
                 return renderRollupConfig()
+            case 'formula':
+                return renderFormulaConfig()
             default:
                 return (
                     <p className="text-sm text-muted-foreground">
