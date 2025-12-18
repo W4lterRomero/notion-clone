@@ -94,6 +94,10 @@ export function useUpdateProperty() {
             queryClient.invalidateQueries({
                 queryKey: ['database', updatedProperty.databaseId],
             })
+            // Also invalidate rows since relation/rollup configs affect row data
+            queryClient.invalidateQueries({
+                queryKey: ['database-rows', updatedProperty.databaseId],
+            })
         },
     })
 }

@@ -112,6 +112,40 @@ export function useUpdateRowValue() {
     })
 }
 
+// Hook para actualizar relations (for relation property type)
+export function useUpdateRelations() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({
+            databaseId,
+            rowId,
+            propertyId,
+            targetRowIds,
+        }: {
+            databaseId: string
+            rowId: string
+            propertyId: string
+            targetRowIds: string[]
+        }) => {
+            const token = localStorage.getItem('access_token')
+            const { data } = await axios.patch(
+                `${API_URL}/databases/${databaseId}/rows/${rowId}/relations`,
+                { propertyId, targetRowIds },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            )
+            return data
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ['database-rows', variables.databaseId],
+            })
+        },
+    })
+}
+
 // Hook para eliminar row
 export function useDeleteRow() {
     const queryClient = useQueryClient()
