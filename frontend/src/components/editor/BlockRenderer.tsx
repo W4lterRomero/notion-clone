@@ -290,6 +290,7 @@ export function BlockRenderer({
                         workspaceId: workspaceId,
                         title: "Base de datos sin título",
                         icon: "📊",
+                        parentId: block.pageId,
                     });
                     console.log("Database created:", newDatabase);
                     // Navigate to the new database

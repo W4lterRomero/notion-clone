@@ -9,6 +9,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import { Page } from '../../pages/entities/page.entity';
 
 export enum PropertyType {
     TITLE = 'title',
@@ -100,5 +101,10 @@ export class DatabaseProperty {
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date;
 
-    // Relations will be added after all entities are created to avoid circular imports
+    // Relations
+    @ManyToOne(() => import('../../pages/entities/page.entity').then(m => m.Page), {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn({ name: 'database_id' })
+    database!: import('../../pages/entities/page.entity').Page;
 }

@@ -17,6 +17,7 @@ import { DatabasePropertiesModule } from './modules/database-properties/database
 import { DatabaseRowsModule } from './modules/database-rows/database-rows.module';
 import { DatabaseViewsModule } from './modules/database-views/database-views.module';
 import { DatabaseRelationsModule } from './modules/database-relations/database-relations.module';
+import { CommentsModule } from './modules/comments/comments.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -40,7 +41,9 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
         DatabasePropertiesModule,
         DatabaseRowsModule,
         DatabaseViewsModule,
+        DatabaseViewsModule,
         DatabaseRelationsModule,
+        CommentsModule,
     ],
     controllers: [],
     providers: [

@@ -9,6 +9,8 @@ import {
     Unique,
     Index,
 } from 'typeorm';
+import { Page } from '../../pages/entities/page.entity';
+import { DatabaseProperty } from '../../database-properties/entities/database-property.entity';
 
 // Value type definitions for different property types
 export interface DateValue {
@@ -58,5 +60,16 @@ export class DatabasePropertyValue {
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date;
 
-    // Relations will be added after all entities are created
+    // Relations
+    @ManyToOne(() => Page, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn({ name: 'row_id' })
+    row!: Page;
+
+    @ManyToOne(() => DatabaseProperty, {
+        onDelete: 'CASCADE',
+    })
+    @JoinColumn({ name: 'property_id' })
+    property!: DatabaseProperty;
 }

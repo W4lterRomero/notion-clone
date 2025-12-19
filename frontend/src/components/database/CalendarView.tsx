@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useDatabaseProperties } from '@/hooks/useDatabaseProperties'
-import { useDatabaseRows, DatabaseRow } from '@/hooks/useDatabaseRows'
+import { useDatabaseRows, useCreateRow, useUpdateRowValue, DatabaseRow } from '@/hooks/useDatabaseRows'
 import { useDatabaseViews, useUpdateView } from '@/hooks/useDatabaseViews'
 import CalendarDayCell from './CalendarDayCell'
 import DayModal from './DayModal'
@@ -108,6 +108,57 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
     const handleDayClick = useCallback((date: Date) => {
         setSelectedDay(date)
     }, [])
+
+    const createRowMutation = useCreateRow()
+    const updateValueMutation = useUpdateRowValue()
+
+    // Add row handler
+    const handleAddRow = useCallback(async (date: Date) => {
+        if (!dateProperty) return
+        try {
+            // 1. Create empty row
+            const newRow = await createRowMutation.mutateAsync({
+                databaseId,
+                title: '',
+            })
+
+            // 2. Set date immediately
+            const dateStr = format(date, 'yyyy-MM-dd')
+            // DateCell expects string in some places, object in others. 
+            // The backend usually expects { start: ... } for dates or just the string if simplified.
+            // Based on `DateCell` reading logic in `CalendarView` (lines 60-65), it reads both.
+            // But `DateCell` WRITES { start: date } usually.
+            // Let's send the object structure to be safe and consistent with DateCell.
+            await updateValueMutation.mutateAsync({
+                databaseId,
+                rowId: newRow.id,
+                propertyId: dateProperty.id,
+                value: { start: dateStr }
+            })
+
+            // 3. Open the new row
+            // We need to fetch the row or just use the object we have. 
+            // newRow from create might not have the property set yet in its return value.
+            // But we can set it manually for the UI or just let invalidation handle it.
+            // Let's set selectedRow to newRow for now.
+            setSelectedRow({
+                ...newRow,
+                propertyValues: [
+                    ...(newRow.propertyValues || []),
+                    {
+                        id: 'temp',
+                        rowId: newRow.id,
+                        propertyId: dateProperty.id,
+                        value: { start: dateStr },
+                        property: dateProperty
+                    }
+                ] as any
+            })
+
+        } catch (e) {
+            console.error('Failed to create row', e)
+        }
+    }, [createRowMutation, updateValueMutation, databaseId, dateProperty])
 
     // Event click handler (from DayModal)
     const handleEventClick = useCallback((row: DatabaseRow) => {
@@ -248,6 +299,7 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
                                     isToday={isToday}
                                     isWeekend={isWeekend}
                                     onDayClick={handleDayClick}
+                                    onAddRow={handleAddRow}
                                 />
                             </motion.div>
                         )

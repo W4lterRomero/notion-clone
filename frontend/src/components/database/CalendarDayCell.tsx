@@ -13,6 +13,7 @@ interface CalendarDayCellProps {
     isToday: boolean
     isWeekend: boolean
     onDayClick?: (date: Date) => void
+    onAddRow?: (date: Date) => void
 }
 
 const CalendarDayCell = React.memo(function CalendarDayCell({
@@ -22,6 +23,7 @@ const CalendarDayCell = React.memo(function CalendarDayCell({
     isToday,
     isWeekend,
     onDayClick,
+    onAddRow,
 }: CalendarDayCellProps) {
     const [isHovered, setIsHovered] = useState(false)
     const maxVisible = 2
@@ -74,7 +76,7 @@ const CalendarDayCell = React.memo(function CalendarDayCell({
                             exit={{ opacity: 0, scale: 0.8 }}
                             onClick={(e) => {
                                 e.stopPropagation()
-                                // TODO: Add quick event creation
+                                onAddRow?.(date)
                             }}
                             className="w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
                         >

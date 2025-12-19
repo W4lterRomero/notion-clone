@@ -17,4 +17,8 @@ export class CreateDatabaseDto {
     @IsString()
     @IsOptional()
     cover?: string;
+
+    @IsUUID()
+    @IsOptional()
+    parentId?: string;
 }

@@ -33,6 +33,7 @@ export class DatabasesService {
         const database = this.pageRepository.create({
             ...createDatabaseDto,
             type: PageType.DATABASE,
+            parentId: createDatabaseDto.parentId,
         });
 
         const savedDatabase = await this.pageRepository.save(database);

@@ -82,6 +82,7 @@ export function useCreateDatabase() {
             title: string
             icon?: string
             cover?: string
+            parentId?: string
         }) => {
             const token = localStorage.getItem('access_token')
             const { data } = await axios.post<Database>(
