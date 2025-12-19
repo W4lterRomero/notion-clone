@@ -1,8 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ImageOff, Calendar, User, Hash, Tag } from 'lucide-react'
+import { Calendar, User, Hash, Tag, CheckSquare, Link2 } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { DatabaseRow } from '@/hooks/useDatabaseRows'
 
@@ -15,7 +15,21 @@ interface GalleryCardProps {
     onClick: () => void
 }
 
-export default function GalleryCard({
+// Generate gradient from title/id for consistent colors
+const getGradient = (seed: string): string => {
+    const gradients = [
+        'from-violet-500/30 via-purple-500/20 to-fuchsia-500/30',
+        'from-blue-500/30 via-cyan-500/20 to-teal-500/30',
+        'from-rose-500/30 via-pink-500/20 to-red-500/30',
+        'from-amber-500/30 via-orange-500/20 to-yellow-500/30',
+        'from-emerald-500/30 via-green-500/20 to-lime-500/30',
+        'from-sky-500/30 via-indigo-500/20 to-blue-500/30',
+    ]
+    const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    return gradients[hash % gradients.length]
+}
+
+const GalleryCard = React.memo(function GalleryCard({
     row,
     properties,
     imageUrl,
@@ -23,12 +37,12 @@ export default function GalleryCard({
     fitImage,
     onClick,
 }: GalleryCardProps) {
-    const getPropertyValue = (propId: string) => {
+    const getPropertyValue = useCallback((propId: string) => {
         const pv = row.propertyValues?.find(v => v.propertyId === propId)
         return pv?.value
-    }
+    }, [row.propertyValues])
 
-    const getPropertyIcon = (type: string): React.ReactNode => {
+    const getPropertyIcon = useCallback((type: string): React.ReactNode => {
         switch (type) {
             case 'date':
                 return <Calendar size={10} className="text-purple-500/70" />
@@ -39,12 +53,16 @@ export default function GalleryCard({
             case 'select':
             case 'multi_select':
                 return <Tag size={10} className="text-orange-500/70" />
+            case 'checkbox':
+                return <CheckSquare size={10} className="text-cyan-500/70" />
+            case 'url':
+                return <Link2 size={10} className="text-blue-500/70" />
             default:
                 return null
         }
-    }
+    }, [])
 
-    const formatValue = (value: unknown, type: string): string | null => {
+    const formatValue = useCallback((value: unknown, type: string): string | null => {
         if (value === null || value === undefined) return null
 
         switch (type) {
@@ -67,46 +85,67 @@ export default function GalleryCard({
             default:
                 return String(value).slice(0, 50)
         }
-    }
+    }, [])
+
+    // Memoize gradient for no-image placeholder
+    const gradientClass = useMemo(() => getGradient(row.id || row.title || ''), [row.id, row.title])
+
+    // Get first letter/emoji for placeholder
+    const placeholderContent = useMemo(() => {
+        if (row.icon) return row.icon
+        if (row.title) return row.title.charAt(0).toUpperCase()
+        return '📄'
+    }, [row.icon, row.title])
 
     return (
         <motion.div
-            className="group bg-background border rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
-            whileHover={{ y: -4, scale: 1.02 }}
+            className="group bg-background border rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer"
+            whileHover={{ y: -6, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
         >
             {/* Image */}
-            <div className={`relative ${imageHeight} bg-muted/50 overflow-hidden`}>
+            <div className={`relative ${imageHeight} overflow-hidden`}>
                 {imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={imageUrl}
                         alt={row.title || 'Image'}
-                        className={`w-full h-full ${fitImage ? 'object-contain' : 'object-cover'} transition-transform group-hover:scale-105`}
+                        className={`w-full h-full ${fitImage ? 'object-contain bg-muted/30' : 'object-cover'} transition-transform duration-300 group-hover:scale-110`}
                         loading="lazy"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <ImageOff size={32} />
+                    // Gradient placeholder
+                    <div className={`w-full h-full bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
+                        <motion.span
+                            className="text-4xl opacity-50 group-hover:opacity-80 transition-opacity"
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                        >
+                            {placeholderContent}
+                        </motion.span>
                     </div>
                 )}
 
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Hover overlay with glassmorphism */}
+                <motion.div
+                    className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3"
+                >
+                    <span className="text-white text-xs font-medium">Clic para ver más</span>
+                </motion.div>
             </div>
 
             {/* Content */}
             <div className="p-3">
                 {/* Title */}
-                <h3 className="font-medium text-sm mb-2 line-clamp-2">
-                    {row.icon && <span className="mr-1">{row.icon}</span>}
+                <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    {row.icon && <span className="mr-1.5">{row.icon}</span>}
                     {row.title || 'Sin título'}
                 </h3>
 
                 {/* Properties */}
                 {properties.length > 0 && (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                         {properties.map(prop => {
                             const value = getPropertyValue(prop.id)
                             const formatted = formatValue(value, prop.type)
@@ -127,4 +166,6 @@ export default function GalleryCard({
             </div>
         </motion.div>
     )
-}
+})
+
+export default GalleryCard
