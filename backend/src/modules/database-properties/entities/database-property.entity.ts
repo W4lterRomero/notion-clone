@@ -102,9 +102,9 @@ export class DatabaseProperty {
     updatedAt!: Date;
 
     // Relations
-    @ManyToOne(() => import('../../pages/entities/page.entity').then(m => m.Page), {
+    @ManyToOne(() => Page, {
         onDelete: 'CASCADE',
     })
     @JoinColumn({ name: 'database_id' })
-    database!: import('../../pages/entities/page.entity').Page;
+    database!: Page;
 }
