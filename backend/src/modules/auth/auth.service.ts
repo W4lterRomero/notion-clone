@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +11,7 @@ import { User } from '../users/entities/user.entity';
 export class AuthService {
     constructor(
         private usersService: UsersService,
+        private workspacesService: WorkspacesService,
         private jwtService: JwtService,
     ) { }
 
@@ -36,6 +38,13 @@ export class AuthService {
             throw new UnauthorizedException('User already exists');
         }
         const user = await this.usersService.create(registerDto);
+
+        // Create default workspace
+        await this.workspacesService.create({
+            name: 'Personal Workspace',
+            icon: '🏠',
+        }, user);
+
         return this.login(user);
     }
 }
