@@ -295,19 +295,24 @@ export function BlockRenderer({
                     });
                     console.log("Database created:", newDatabase);
 
-                    // [PREMIUM FIX] Update current block to be a "child_database" block
-                    // DEFAULT TO INLINE (User Request)
-                    onUpdate({
+                    // [CRITICAL FIX] Update block IMMEDIATELY and SYNCHRONOUSLY
+                    // The onUpdate must complete before anything else happens
+                    const updatePayload = {
                         type: "child_database",
                         content: newDatabase.title,
                         properties: {
                             databaseId: newDatabase.id,
                             isInline: true
                         }
-                    });
+                    };
+                    console.log("[BlockRenderer] Updating block to child_database:", updatePayload);
 
-                    // NO NAVIGATION - Stay on page for inline experience
-                    // router.push(`/workspaces/${workspaceId}/databases/${newDatabase.id}`);
+                    // Call onUpdate - this should trigger the API call
+                    onUpdate(updatePayload);
+                    console.log("[BlockRenderer] onUpdate called - block should now be child_database type");
+
+                    // DO NOT NAVIGATE - the inline DatabaseView will render
+
                 } catch (error: unknown) {
                     console.error("Error creating database:", error);
                     const errorMessage = error instanceof Error ? error.message :

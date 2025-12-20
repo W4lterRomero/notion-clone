@@ -1,9 +1,10 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { usePage, usePages } from "@/hooks/usePages";
 import { BlockEditor } from "@/components/editor/BlockEditor";
 import { PageHeader } from "@/components/editor/PageHeader";
+import DatabaseView from "@/components/database/DatabaseView";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -32,13 +33,6 @@ export default function PageEditorPage() {
         }
     };
 
-    const router = useRouter()
-
-    if (page?.type === 'database') {
-        router.replace(`/workspaces/${params.id}/databases/${pageId}`)
-        return null
-    }
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -64,6 +58,37 @@ export default function PageEditorPage() {
         );
     }
 
+    // [DEBUG] Always log page data to debug intermittent type detection
+    console.log('[PageEditorPage] Rendering - pageId:', pageId, 'page:', page, 'page.type:', page?.type);
+
+    // [CRITICAL FIX] If this is a database, render DatabaseView directly
+    // No redirect needed - just show the database table
+    if (page.type === 'database') {
+        console.log('[PageEditorPage] Detected DATABASE type - rendering DatabaseView');
+        return (
+            <div className="min-h-screen">
+                {/* Back button */}
+                <div className="sticky top-0 bg-background/80 backdrop-blur-sm border-b px-4 py-2 z-10">
+                    <Link href={`/workspaces/${workspaceId}`}>
+                        <Button variant="ghost" size="sm">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            {page.workspace?.name || "Workspace"}
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Database View - render full database with header */}
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <DatabaseView
+                        databaseId={pageId}
+                        showHeader={true}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // Regular page - show BlockEditor
     return (
         <div className="min-h-screen">
             {/* Back button */}

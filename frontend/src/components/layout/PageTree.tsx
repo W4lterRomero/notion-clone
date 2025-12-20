@@ -71,18 +71,130 @@ export function PageTree({ workspaceId }: PageTreeProps) {
         }
     };
 
+    // Build recursive tree from flat list
+    const pageTree = useMemo(() => {
+        if (!pages) return [];
+
+        const tree: Array<typeof pages[0] & { children: typeof pages }> = [];
+        const map = new Map<string, typeof pages[0] & { children: typeof pages }>();
+
+        // Initialize map with all pages + empty children array
+        pages.forEach(page => {
+            map.set(page.id, { ...page, children: [] });
+        });
+
+        // Build hierarchy
+        pages.forEach(page => {
+            const node = map.get(page.id);
+            if (!node) return;
+
+            if (page.parentId && map.has(page.parentId)) {
+                map.get(page.parentId)!.children.push(node);
+            } else {
+                // Determine if it's a root item (no parent or parent not found in list)
+                // BUT: if we are searching, we flatten result
+                tree.push(node);
+            }
+        });
+
+        return tree;
+    }, [pages]);
+
+    // Recursive render component
+    const PageItem = ({ page, level = 0 }: { page: typeof pages[0] & { children: typeof pages }, level?: number }) => {
+        const isActive = pathname.includes(page.id);
+        const title = page.title || "Sin título";
+        const hasChildren = page.children && page.children.length > 0;
+        const [isExpanded, setIsExpanded] = useState(false);
+
+        // Auto-expand if active child
+        // (Simplified for now: keep closed unless manually opened or active)
+
+        return (
+            <div className="select-none">
+                <div
+                    className={cn(
+                        "group relative flex items-center gap-1 rounded text-sm transition-all w-full hover:bg-muted py-1",
+                        isActive && "bg-primary/10 text-primary font-medium"
+                    )}
+                    style={{ paddingLeft: `${(level * 12) + 8}px` }}
+                >
+                    {/* Expand/Collapse Toggle */}
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setIsExpanded(!isExpanded);
+                        }}
+                        className={cn(
+                            "h-4 w-4 flex items-center justify-center rounded hover:bg-muted-foreground/20 text-muted-foreground transition-transform",
+                            hasChildren ? "opacity-100" : "opacity-0",
+                            isExpanded && "rotate-90"
+                        )}
+                        disabled={!hasChildren}
+                    >
+                        <span className="text-[10px]">▶</span>
+                    </button>
+
+                    <Link
+                        href={page.type === 'database'
+                            ? `/workspaces/${workspaceId}/databases/${page.id}`
+                            : `/workspaces/${workspaceId}/pages/${page.id}`
+                        }
+                        className="flex-1 flex items-center gap-2 overflow-hidden"
+                    >
+                        <span className="text-base flex-shrink-0">
+                            {page.icon || (page.type === 'database' ? '📊' : '📄')}
+                        </span>
+                        <span className="truncate">
+                            {title}
+                        </span>
+                    </Link>
+
+                    {/* Actions Menu */}
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center px-1">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="p-0.5 rounded hover:bg-muted-foreground/20">
+                                    <MoreHorizontal className="h-3 w-3" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={(e) => handleDeletePage(page.id, e)} className="text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                {/* Children */}
+                {isExpanded && hasChildren && (
+                    <div>
+                        {page.children.map(child => (
+                            <PageItem key={child.id} page={child} level={level + 1} />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-2 px-2">
                 {[1, 2, 3].map((i) => (
-                    <div
-                        key={i}
-                        className="h-8 bg-muted rounded animate-pulse"
-                    />
+                    <div key={i} className="h-8 bg-muted rounded animate-pulse" />
                 ))}
             </div>
         );
     }
+
+    // Render Logic:
+    // If Searching -> Show FLAT filtered list
+    // If Not Searching -> Show TREE (only roots)
+
+    const listToRender = searchQuery ? filteredPages.map(p => ({ ...p, children: [] })) : pageTree;
 
     return (
         <div className="space-y-1">
@@ -111,111 +223,29 @@ export function PageTree({ workspaceId }: PageTreeProps) {
             )}
 
             {/* Header con botón de nueva página */}
-            <div className="px-4 py-1.5 flex items-center justify-between">
+            <div className="px-4 py-1.5 flex items-center justify-between group">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Páginas
-                    {searchQuery && ` (${filteredPages.length})`}
                 </span>
                 <button
                     onClick={handleCreatePage}
                     disabled={isCreating}
-                    className={cn(
-                        "p-1 hover:bg-muted rounded transition-all",
-                        "disabled:opacity-50 disabled:cursor-not-allowed",
-                        isCreating && "animate-pulse"
-                    )}
+                    className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Nueva página"
                 >
                     <Plus className="h-4 w-4" />
                 </button>
             </div>
 
-            {/* Lista de páginas */}
-            {filteredPages.length === 0 ? (
-                <div className="px-4 py-8 text-sm text-muted-foreground text-center">
-                    {searchQuery ? (
-                        <>
-                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>Sin resultados para &quot;{searchQuery}&quot;</p>
-                        </>
-                    ) : (
-                        <>
-                            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>Sin páginas aún</p>
-                            <button
-                                onClick={handleCreatePage}
-                                disabled={isCreating}
-                                className="text-primary hover:underline mt-2 text-xs"
-                            >
-                                Crear la primera página
-                            </button>
-                        </>
-                    )}
+            {listToRender.length === 0 ? (
+                <div className="px-4 py-4 text-sm text-muted-foreground text-center">
+                    <p>Sin páginas</p>
                 </div>
             ) : (
-                <div className="space-y-0.5 px-2">
-                    <TooltipProvider delayDuration={500}>
-                        {filteredPages.map((page) => {
-                            const isActive = pathname.includes(page.id);
-                            const title = page.title || "Sin título";
-                            const showTooltip = title.length > 20;
-
-                            return (
-                                <div key={page.id} className="group relative">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Link
-                                                href={page.type === 'database'
-                                                    ? `/workspaces/${workspaceId}/databases/${page.id}`
-                                                    : `/workspaces/${workspaceId}/pages/${page.id}`
-                                                }
-                                                className={cn(
-                                                    "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-all w-full",
-                                                    "hover:bg-muted hover:pl-3",
-                                                    isActive &&
-                                                    "bg-primary/10 text-primary font-medium border-l-2 border-primary pl-2"
-                                                )}
-                                            >
-                                                <span className="text-base flex-shrink-0">
-                                                    {page.icon || (page.type === 'database' ? '📊' : '📄')}
-                                                </span>
-                                                <span className="truncate flex-1">
-                                                    {title}
-                                                </span>
-                                            </Link>
-                                        </TooltipTrigger>
-                                        {showTooltip && (
-                                            <TooltipContent side="right">
-                                                <p>{title}</p>
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-
-                                    {/* Menu contextual */}
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button className="p-1 rounded hover:bg-muted">
-                                                    <MoreHorizontal className="h-3 w-3" />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onClick={(e) =>
-                                                        handleDeletePage(page.id, e)
-                                                    }
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                    Eliminar
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </TooltipProvider>
+                <div className="space-y-0.5">
+                    {listToRender.map((node) => (
+                        <PageItem key={node.id} page={node} />
+                    ))}
                 </div>
             )}
         </div>
