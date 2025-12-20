@@ -94,7 +94,7 @@ export default function PropertyHeader({
 
     if (isAddButton) {
         return (
-            <div className="px-3 py-2 border-r border-b bg-muted/50 min-w-[150px]">
+            <div className="px-2 sm:px-3 py-2 border-r border-b bg-muted/50 min-w-[60px] sm:min-w-[80px] md:min-w-[120px]">
                 {isCreating ? (
                     <div className="space-y-2">
                         <input
@@ -175,13 +175,13 @@ export default function PropertyHeader({
 
     return (
         <>
-            <div ref={menuRef} className="px-3 py-2 border-r border-b bg-muted/50 min-w-[150px] group relative">
+            <div ref={menuRef} className="px-2 sm:px-3 py-2 border-r border-b bg-muted/50 min-w-[80px] sm:min-w-[100px] md:min-w-[120px] group relative">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <span className="text-muted-foreground hidden sm:inline">
                             {propertyTypeIcons[property.type] || <Type size={14} />}
                         </span>
-                        <span className="text-sm font-medium">{property.name}</span>
+                        <span className="text-xs sm:text-sm font-medium truncate max-w-[60px] sm:max-w-[100px]">{property.name}</span>
                     </div>
                     {(canConfigure || canDelete) && (
                         <button
@@ -194,7 +194,7 @@ export default function PropertyHeader({
                 </div>
 
                 {showMenu && (
-                    <div className="absolute right-0 top-full mt-1 bg-popover border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                    <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-1 bg-popover border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
                         {canConfigure && (
                             <button
                                 onClick={() => { setIsConfigOpen(true); setShowMenu(false); }}

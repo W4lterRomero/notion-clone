@@ -4,14 +4,19 @@ import Link from "next/link"
 import { useWorkspaces } from "@/hooks/useWorkspaces"
 import { useWorkspaceStore } from "@/store/workspaceStore"
 import { Button } from "@/components/ui/button"
-import { Plus, Layout, Settings, LogOut, ChevronRight, ChevronDown } from "lucide-react"
+import { Plus, Layout, Settings, LogOut, ChevronRight, ChevronDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { PageTree } from "./PageTree"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState } from "react"
 
-export function Sidebar({ className }: { className?: string }) {
+interface SidebarProps {
+    className?: string
+    onCloseMobile?: () => void
+}
+
+export function Sidebar({ className, onCloseMobile }: SidebarProps) {
     const { user, Logout } = useAuth()
     const { workspaces, createWorkspace } = useWorkspaces()
     const { currentWorkspace, setCurrentWorkspace } = useWorkspaceStore()
@@ -45,14 +50,22 @@ export function Sidebar({ className }: { className?: string }) {
     }
 
     return (
-        <div className={cn("flex flex-col w-64 border-r bg-muted/20 h-screen", className)}>
+        <div className={cn("flex flex-col w-64 md:w-64 border-r bg-muted/20 h-screen shrink-0", className)}>
             {/* Header */}
             <div className="px-3 py-4 border-b">
                 <div className="flex items-center justify-between mb-2 px-1">
                     <h2 className="text-lg font-semibold tracking-tight">Workspaces</h2>
-                    <Button variant="ghost" size="icon" onClick={handleCreateWorkspace}>
-                        <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={handleCreateWorkspace}>
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                        {/* Close button - visible only on mobile */}
+                        {onCloseMobile && (
+                            <Button variant="ghost" size="icon" onClick={onCloseMobile} className="md:hidden">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 

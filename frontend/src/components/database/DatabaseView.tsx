@@ -75,12 +75,12 @@ export default function DatabaseView({ databaseId, showHeader = true, className 
     }
 
     return (
-        <div className={`p-6 ${className || ''}`}>
+        <div className={`p-3 sm:p-4 md:p-6 ${className || ''}`}>
             {/* Header */}
             {showHeader && (
-                <div className="mb-6 flex items-center gap-3">
-                    <span className="text-4xl">{database.icon || '📊'}</span>
-                    <h1 className="text-3xl font-semibold">{database.title}</h1>
+                <div className="mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
+                    <span className="text-2xl sm:text-3xl md:text-4xl">{database.icon || '📊'}</span>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold truncate">{database.title}</h1>
                 </div>
             )}
 

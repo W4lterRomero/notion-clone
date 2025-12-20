@@ -221,33 +221,33 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
         <>
             <div className="border rounded-xl overflow-hidden shadow-sm">
                 {/* Calendar Header */}
-                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-muted/40 to-muted/20 border-b">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 bg-background/80 rounded-lg p-1 shadow-sm">
+                <div className="flex items-center justify-between px-2 sm:px-5 py-2 sm:py-4 bg-gradient-to-r from-muted/40 to-muted/20 border-b">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        <div className="flex items-center gap-0.5 sm:gap-1 bg-background/80 rounded-lg p-0.5 sm:p-1 shadow-sm">
                             <motion.button
                                 onClick={goToPreviousMonth}
-                                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                                className="p-1.5 sm:p-2 rounded-lg hover:bg-muted transition-colors"
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                             >
-                                <ChevronLeft size={18} />
+                                <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </motion.button>
                             <motion.button
                                 onClick={goToNextMonth}
-                                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                                className="p-1.5 sm:p-2 rounded-lg hover:bg-muted transition-colors"
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                             >
-                                <ChevronRight size={18} />
+                                <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </motion.button>
                         </div>
-                        <h2 className="text-xl font-bold capitalize">
+                        <h2 className="text-sm sm:text-xl font-bold capitalize">
                             {format(currentMonth, 'MMMM yyyy', { locale: es })}
                         </h2>
                     </div>
                     <motion.button
                         onClick={goToToday}
-                        className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
+                        className="px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
@@ -264,10 +264,11 @@ export default function CalendarView({ databaseId, workspaceId, viewConfig }: Ca
                         return (
                             <div
                                 key={day}
-                                className={`p-3 text-center text-sm font-semibold ${isWeekend ? 'text-muted-foreground/70' : 'text-foreground'
+                                className={`p-1 sm:p-3 text-center text-xs sm:text-sm font-semibold ${isWeekend ? 'text-muted-foreground/70' : 'text-foreground'
                                     }`}
                             >
-                                {day}
+                                <span className="hidden sm:inline">{day}</span>
+                                <span className="sm:hidden">{day[0]}</span>
                             </div>
                         )
                     })}

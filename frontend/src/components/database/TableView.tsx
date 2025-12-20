@@ -112,19 +112,19 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
     return (
         <div className="space-y-2">
             {/* Toolbar */}
-            <div className="flex items-center gap-2 px-1">
+            <div className="flex items-center gap-1 sm:gap-2 px-1">
                 {/* Filter Button */}
                 <div className="relative">
                     <button
                         ref={filterButtonRef}
                         onClick={() => setShowFilterBuilder(!showFilterBuilder)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${hasActiveFilter
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${hasActiveFilter
                             ? 'bg-primary/10 text-primary'
                             : 'hover:bg-muted text-muted-foreground'
                             }`}
                     >
                         <Filter size={14} />
-                        <span>Filtrar</span>
+                        <span className="hidden sm:inline">Filtrar</span>
                         {hasActiveFilter && (
                             <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
                                 {activeFilter?.conditions.length}
@@ -153,13 +153,13 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
                     <button
                         ref={sortButtonRef}
                         onClick={() => setShowSortBuilder(!showSortBuilder)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${hasActiveSort
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${hasActiveSort
                             ? 'bg-primary/10 text-primary'
                             : 'hover:bg-muted text-muted-foreground'
                             }`}
                     >
                         <ArrowUpDown size={14} />
-                        <span>Ordenar</span>
+                        <span className="hidden sm:inline">Ordenar</span>
                         {hasActiveSort && (
                             <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
                                 {activeSorts.length}
@@ -199,107 +199,115 @@ export default function TableView({ databaseId, workspaceId }: TableViewProps) {
             </div>
 
             {/* Table */}
-            <div className="border rounded-lg overflow-auto">
-                <table className="w-full border-collapse">
-                    {/* Header Row */}
-                    <thead>
-                        <tr>
-                            {sortedProperties.map((property) => {
-                                // Check if this property has active sort
-                                const sortIndex = activeSorts.findIndex(s => s.propertyId === property.id)
-                                const sortConfig = sortIndex >= 0 ? activeSorts[sortIndex] : null
-
-                                return (
-                                    <th key={property.id} className="text-left p-0 relative">
-                                        <PropertyHeader
-                                            databaseId={databaseId}
-                                            property={property}
-                                            workspaceId={workspaceId}
-                                            allProperties={properties || []}
-                                        />
-                                        {sortConfig && (
-                                            <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
-                                                {sortIndex + 1}
-                                            </span>
-                                        )}
-                                    </th>
-                                )
-                            })}
-                            <th className="text-left p-0">
-                                <PropertyHeader databaseId={databaseId} isAddButton />
-                            </th>
-                        </tr>
-                    </thead>
-
-                    {/* Data Rows */}
-                    <tbody>
-                        {filteredRows.map((row) => (
-                            <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors">
+            <div className="relative">
+                {/* Scroll hint - visible on mobile */}
+                <div className="sm:hidden text-xs text-muted-foreground text-center mb-1 flex items-center justify-center gap-1">
+                    <span>← Desliza →</span>
+                </div>
+                {/* Right edge scroll indicator */}
+                <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
+                <div className="border rounded-lg overflow-x-auto">
+                    <table className="w-full border-collapse min-w-[400px]">
+                        {/* Header Row */}
+                        <thead>
+                            <tr>
                                 {sortedProperties.map((property) => {
-                                    // Find value for this property
-                                    const propertyValue = row.propertyValues?.find(
-                                        (pv) => pv.propertyId === property.id
-                                    )
-
-                                    // For title property, use row.title if no property value
-                                    let cellValue = propertyValue?.value
-                                    if (property.type === 'title' && !cellValue) {
-                                        cellValue = row.title
-                                    }
-
-                                    // Get relatedRows for relation properties
-                                    const relatedRows = (propertyValue as { relatedRows?: { id: string; title: string; icon: string | null }[] })?.relatedRows
+                                    // Check if this property has active sort
+                                    const sortIndex = activeSorts.findIndex(s => s.propertyId === property.id)
+                                    const sortConfig = sortIndex >= 0 ? activeSorts[sortIndex] : null
 
                                     return (
-                                        <td key={property.id} className="p-0">
-                                            <PropertyCell
+                                        <th key={property.id} className="text-left p-0 relative whitespace-nowrap">
+                                            <PropertyHeader
                                                 databaseId={databaseId}
-                                                workspaceId={workspaceId}
-                                                rowId={row.id}
                                                 property={property}
-                                                value={cellValue}
-                                                relatedRows={relatedRows}
+                                                workspaceId={workspaceId}
+                                                allProperties={properties || []}
                                             />
-                                        </td>
+                                            {sortConfig && (
+                                                <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                                                    {sortIndex + 1}
+                                                </span>
+                                            )}
+                                        </th>
                                     )
                                 })}
-                                <td className="p-0 border-r" />
+                                <th className="text-left p-0">
+                                    <PropertyHeader databaseId={databaseId} isAddButton />
+                                </th>
                             </tr>
-                        ))}
+                        </thead>
 
-                        {/* Empty state */}
-                        {filteredRows.length === 0 && (
+                        {/* Data Rows */}
+                        <tbody>
+                            {filteredRows.map((row) => (
+                                <tr key={row.id} className="border-b hover:bg-muted/30 transition-colors">
+                                    {sortedProperties.map((property) => {
+                                        // Find value for this property
+                                        const propertyValue = row.propertyValues?.find(
+                                            (pv) => pv.propertyId === property.id
+                                        )
+
+                                        // For title property, use row.title if no property value
+                                        let cellValue = propertyValue?.value
+                                        if (property.type === 'title' && !cellValue) {
+                                            cellValue = row.title
+                                        }
+
+                                        // Get relatedRows for relation properties
+                                        const relatedRows = (propertyValue as { relatedRows?: { id: string; title: string; icon: string | null }[] })?.relatedRows
+
+                                        return (
+                                            <td key={property.id} className="p-0">
+                                                <PropertyCell
+                                                    databaseId={databaseId}
+                                                    workspaceId={workspaceId}
+                                                    rowId={row.id}
+                                                    property={property}
+                                                    value={cellValue}
+                                                    relatedRows={relatedRows}
+                                                />
+                                            </td>
+                                        )
+                                    })}
+                                    <td className="p-0 border-r" />
+                                </tr>
+                            ))}
+
+                            {/* Empty state */}
+                            {filteredRows.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={(sortedProperties.length || 0) + 1}
+                                        className="p-8 text-center text-muted-foreground"
+                                    >
+                                        {hasActiveFilter
+                                            ? 'No hay filas que coincidan con el filtro.'
+                                            : 'No hay filas. Haz clic en "Nueva fila" para agregar una.'}
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* Add Row Button */}
                             <tr>
-                                <td
-                                    colSpan={(sortedProperties.length || 0) + 1}
-                                    className="p-8 text-center text-muted-foreground"
-                                >
-                                    {hasActiveFilter
-                                        ? 'No hay filas que coincidan con el filtro.'
-                                        : 'No hay filas. Haz clic en "Nueva fila" para agregar una.'}
+                                <td colSpan={(sortedProperties.length || 0) + 1} className="p-0">
+                                    <button
+                                        onClick={handleCreateRow}
+                                        disabled={createRowMutation.isPending}
+                                        className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 w-full transition-colors"
+                                    >
+                                        {createRowMutation.isPending ? (
+                                            <Loader2 size={14} className="animate-spin" />
+                                        ) : (
+                                            <Plus size={14} />
+                                        )}
+                                        <span>Nueva fila</span>
+                                    </button>
                                 </td>
                             </tr>
-                        )}
-
-                        {/* Add Row Button */}
-                        <tr>
-                            <td colSpan={(sortedProperties.length || 0) + 1} className="p-0">
-                                <button
-                                    onClick={handleCreateRow}
-                                    disabled={createRowMutation.isPending}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 w-full transition-colors"
-                                >
-                                    {createRowMutation.isPending ? (
-                                        <Loader2 size={14} className="animate-spin" />
-                                    ) : (
-                                        <Plus size={14} />
-                                    )}
-                                    <span>Nueva fila</span>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     )

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Plus, X, Check } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateRowValue } from '@/hooks/useDatabaseRows'
@@ -36,6 +37,12 @@ interface SelectCellProps {
     value: string | null
 }
 
+interface DropdownPosition {
+    top: number
+    left: number
+    width: number
+}
+
 export default function SelectCell({
     databaseId,
     rowId,
@@ -45,23 +52,77 @@ export default function SelectCell({
     const [isOpen, setIsOpen] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [newOptionName, setNewOptionName] = useState('')
-    const menuRef = useRef<HTMLDivElement>(null)
+    const [position, setPosition] = useState<DropdownPosition>({ top: 0, left: 0, width: 200 })
+    const triggerRef = useRef<HTMLDivElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
     const updateValueMutation = useUpdateRowValue()
     const updatePropertyMutation = useUpdateProperty()
 
     const options: SelectOption[] = (property.config as { options?: SelectOption[] })?.options || []
     const selectedOption = options.find(opt => opt.id === value)
 
+    // Calculate position when opening
+    const updatePosition = useCallback(() => {
+        if (triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect()
+            const dropdownHeight = 250 // approximate max height
+            const dropdownWidth = Math.max(rect.width, 200)
+            const viewportHeight = window.innerHeight
+            const viewportWidth = window.innerWidth
+            const padding = 8 // padding from viewport edges
+
+            // Vertical positioning
+            const spaceBelow = viewportHeight - rect.bottom
+            const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
+
+            // Horizontal positioning - ensure dropdown doesn't go off-screen
+            let left = rect.left
+            if (left + dropdownWidth > viewportWidth - padding) {
+                // Align to right edge of viewport
+                left = viewportWidth - dropdownWidth - padding
+            }
+            if (left < padding) {
+                // Ensure minimum left padding
+                left = padding
+            }
+
+            setPosition({
+                top: showAbove ? rect.top - dropdownHeight : rect.bottom + 4,
+                left: left,
+                width: Math.min(dropdownWidth, viewportWidth - padding * 2),
+            })
+        }
+    }, [])
+
+    // Update position when opening or on scroll/resize
     useEffect(() => {
+        if (isOpen) {
+            updatePosition()
+            window.addEventListener('scroll', updatePosition, true)
+            window.addEventListener('resize', updatePosition)
+            return () => {
+                window.removeEventListener('scroll', updatePosition, true)
+                window.removeEventListener('resize', updatePosition)
+            }
+        }
+    }, [isOpen, updatePosition])
+
+    // Close on click outside
+    useEffect(() => {
+        if (!isOpen) return
         const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            const target = e.target as Node
+            if (
+                triggerRef.current && !triggerRef.current.contains(target) &&
+                dropdownRef.current && !dropdownRef.current.contains(target)
+            ) {
                 setIsOpen(false)
                 setIsCreating(false)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+    }, [isOpen])
 
     const handleSelect = async (optionId: string | null) => {
         setIsOpen(false)
@@ -93,12 +154,106 @@ export default function SelectCell({
         setIsCreating(false)
     }
 
+    const handleToggle = () => {
+        if (!isOpen) updatePosition()
+        setIsOpen(!isOpen)
+    }
+
+    // Dropdown content rendered via Portal
+    const dropdownContent = isOpen && typeof document !== 'undefined' ? createPortal(
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 z-[9998]"
+                onClick={() => setIsOpen(false)}
+            />
+            {/* Dropdown */}
+            <div
+                ref={dropdownRef}
+                className="fixed z-[9999] bg-popover border rounded-lg shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150"
+                style={{
+                    top: position.top,
+                    left: position.left,
+                    minWidth: position.width,
+                    maxWidth: 300,
+                }}
+            >
+                {/* Clear option */}
+                {value && (
+                    <div
+                        className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2 border-b"
+                        onClick={() => handleSelect(null)}
+                    >
+                        <X size={14} />
+                        <span>Limpiar</span>
+                    </div>
+                )}
+
+                {/* Options list */}
+                <div className="max-h-48 overflow-y-auto">
+                    {options.length === 0 && !isCreating && (
+                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+                            Sin opciones
+                        </div>
+                    )}
+                    {options.map((option) => (
+                        <div
+                            key={option.id}
+                            className={cn(
+                                "px-3 py-2 cursor-pointer hover:bg-muted transition-colors flex items-center justify-between",
+                                option.id === value && "bg-muted"
+                            )}
+                            onClick={() => handleSelect(option.id)}
+                        >
+                            <span className={cn(
+                                "px-2 py-0.5 rounded text-sm font-medium",
+                                OPTION_COLORS[option.color]?.bg,
+                                OPTION_COLORS[option.color]?.text
+                            )}>
+                                {option.name}
+                            </span>
+                            {option.id === value && <Check size={14} className="text-primary" />}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Create new option */}
+                {isCreating ? (
+                    <div className="p-2 border-t">
+                        <input
+                            type="text"
+                            value={newOptionName}
+                            onChange={(e) => setNewOptionName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleCreateOption()
+                                if (e.key === 'Escape') setIsCreating(false)
+                            }}
+                            className="w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background"
+                            placeholder="Nombre de opción..."
+                            autoFocus
+                        />
+                    </div>
+                ) : (
+                    <div
+                        className="px-3 py-2 border-t text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2"
+                        onClick={() => setIsCreating(true)}
+                    >
+                        <Plus size={14} />
+                        <span>Crear opción</span>
+                    </div>
+                )}
+            </div>
+        </>,
+        document.body
+    ) : null
+
     return (
-        <div ref={menuRef} className="relative w-full">
+        <div className="relative w-full">
             {/* Trigger */}
             <div
+                ref={triggerRef}
                 className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-between min-h-[40px]"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={handleToggle}
             >
                 {selectedOption ? (
                     <span className={cn(
@@ -117,70 +272,8 @@ export default function SelectCell({
                 )} />
             </div>
 
-            {/* Dropdown */}
-            {isOpen && (
-                <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-popover border rounded-lg shadow-lg overflow-hidden">
-                    {/* Clear option */}
-                    {value && (
-                        <div
-                            className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2 border-b"
-                            onClick={() => handleSelect(null)}
-                        >
-                            <X size={14} />
-                            <span>Limpiar</span>
-                        </div>
-                    )}
-
-                    {/* Options list */}
-                    <div className="max-h-48 overflow-y-auto">
-                        {options.map((option) => (
-                            <div
-                                key={option.id}
-                                className={cn(
-                                    "px-3 py-2 cursor-pointer hover:bg-muted transition-colors flex items-center justify-between",
-                                    option.id === value && "bg-muted"
-                                )}
-                                onClick={() => handleSelect(option.id)}
-                            >
-                                <span className={cn(
-                                    "px-2 py-0.5 rounded text-sm font-medium",
-                                    OPTION_COLORS[option.color]?.bg,
-                                    OPTION_COLORS[option.color]?.text
-                                )}>
-                                    {option.name}
-                                </span>
-                                {option.id === value && <Check size={14} className="text-primary" />}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Create new option */}
-                    {isCreating ? (
-                        <div className="p-2 border-t">
-                            <input
-                                type="text"
-                                value={newOptionName}
-                                onChange={(e) => setNewOptionName(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleCreateOption()
-                                    if (e.key === 'Escape') setIsCreating(false)
-                                }}
-                                className="w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background"
-                                placeholder="Nombre de opción..."
-                                autoFocus
-                            />
-                        </div>
-                    ) : (
-                        <div
-                            className="px-3 py-2 border-t text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2"
-                            onClick={() => setIsCreating(true)}
-                        >
-                            <Plus size={14} />
-                            <span>Crear opción</span>
-                        </div>
-                    )}
-                </div>
-            )}
+            {/* Portal dropdown */}
+            {dropdownContent}
         </div>
     )
 }

@@ -58,7 +58,7 @@ export default function SortBuilder({
     }
 
     return (
-        <div className="w-[400px] bg-popover border rounded-xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
+        <div className="w-[calc(100vw-2rem)] sm:w-[350px] md:w-[400px] max-w-[400px] bg-popover border rounded-xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b bg-muted/30">
                 <div className="flex items-center gap-2">

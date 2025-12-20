@@ -39,7 +39,7 @@ const CalendarDayCell = React.memo(function CalendarDayCell({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             className={`
-                min-h-[120px] border-r border-b p-2 transition-all cursor-pointer relative
+                min-h-[60px] sm:min-h-[100px] md:min-h-[120px] border-r border-b p-1 sm:p-2 transition-all cursor-pointer relative
                 ${!isCurrentMonth ? 'bg-muted/20' : 'bg-background'}
                 ${isWeekend ? 'bg-muted/10' : ''}
                 hover:bg-primary/5 hover:shadow-inner
@@ -48,10 +48,10 @@ const CalendarDayCell = React.memo(function CalendarDayCell({
             transition={{ duration: 0.15 }}
         >
             {/* Date Number */}
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-0.5 sm:mb-2">
                 <motion.span
                     className={`
-                        w-8 h-8 flex items-center justify-center text-sm font-medium rounded-full transition-all
+                        w-5 h-5 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-medium rounded-full transition-all
                         ${isToday
                             ? 'bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/30'
                             : !isCurrentMonth

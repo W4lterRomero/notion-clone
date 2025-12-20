@@ -78,9 +78,9 @@ export default function ViewSwitcher({ databaseId, currentViewId, onViewChange }
     }
 
     return (
-        <div className="flex items-center gap-1 mb-4">
+        <div className="flex items-center gap-1 mb-3 md:mb-4 flex-wrap">
             {/* View Tabs */}
-            <div className="flex items-center bg-muted/30 rounded-lg p-1 gap-1">
+            <div className="flex items-center bg-muted/30 rounded-lg p-1 gap-0.5 sm:gap-1">
                 {views?.map((view, index) => {
                     const Icon = VIEW_ICONS[view.type as keyof typeof VIEW_ICONS] || Table
                     const isActive = view.id === currentView?.id
@@ -103,8 +103,8 @@ export default function ViewSwitcher({ databaseId, currentViewId, onViewChange }
                                 <motion.button
                                     onClick={() => onViewChange(view.id)}
                                     className={`relative flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${isActive
-                                            ? 'text-foreground'
-                                            : 'text-muted-foreground hover:text-foreground'
+                                        ? 'text-foreground'
+                                        : 'text-muted-foreground hover:text-foreground'
                                         }`}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
@@ -117,9 +117,9 @@ export default function ViewSwitcher({ databaseId, currentViewId, onViewChange }
                                             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                                         />
                                     )}
-                                    <span className="relative flex items-center gap-2">
+                                    <span className="relative flex items-center gap-1 sm:gap-2">
                                         <Icon size={14} />
-                                        <span>{view.name}</span>
+                                        <span className="hidden sm:inline text-xs sm:text-sm">{view.name}</span>
                                     </span>
                                 </motion.button>
                             )}
