@@ -8,6 +8,7 @@ import { debounce } from "@/lib/debounce";
 import { parseInlineMarkdown, hasMarkdownSyntax } from "@/lib/markdown";
 import { useCreateDatabase } from "@/hooks/useDatabases";
 import { SlashCommand } from "./SlashCommand";
+import DatabaseView from "../database/DatabaseView";
 
 // R12: @dnd-kit sortable imports
 import { useSortable } from "@dnd-kit/sortable";
@@ -295,14 +296,18 @@ export function BlockRenderer({
                     console.log("Database created:", newDatabase);
 
                     // [PREMIUM FIX] Update current block to be a "child_database" block
+                    // DEFAULT TO INLINE (User Request)
                     onUpdate({
                         type: "child_database",
                         content: newDatabase.title,
-                        properties: { databaseId: newDatabase.id }
+                        properties: {
+                            databaseId: newDatabase.id,
+                            isInline: true
+                        }
                     });
 
-                    // Navigate to the new database
-                    router.push(`/workspaces/${workspaceId}/databases/${newDatabase.id}`);
+                    // NO NAVIGATION - Stay on page for inline experience
+                    // router.push(`/workspaces/${workspaceId}/databases/${newDatabase.id}`);
                 } catch (error: unknown) {
                     console.error("Error creating database:", error);
                     const errorMessage = error instanceof Error ? error.message :
@@ -646,25 +651,37 @@ export function BlockRenderer({
                 </div>
             )}
 
-            {/* [PREMIUM FIX] Child Database Link Rendering */}
+            {/* [PREMIUM FIX] Child Database Rendering (Inline vs Link) */}
             {block.type === "child_database" && (
-                <div
-                    contentEditable={false}
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer border border-transparent hover:border-border transition-all"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        // Navigate to database
-                        if (block.properties?.databaseId) {
-                            router.push(`/workspaces/${workspaceId}/databases/${block.properties.databaseId}`);
-                        } else {
-                            alert("Error: Database ID missing");
-                        }
-                    }}
-                >
-                    <span className="text-xl">📊</span>
-                    <span className="font-medium underline decoration-muted-foreground/30 underline-offset-4">
-                        {block.content || "Sin título"}
-                    </span>
+                <div contentEditable={false} className="my-2 select-none">
+                    {block.properties?.isInline ? (
+                        // INLINE MODE: Render the full database view here
+                        <div className="border rounded-md shadow-sm bg-background overflow-hidden">
+                            <DatabaseView
+                                databaseId={block.properties.databaseId}
+                                showHeader={true}
+                                className="p-0"
+                            />
+                        </div>
+                    ) : (
+                        // LINK MODE: Render the link card
+                        <div
+                            className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer border border-transparent hover:border-border transition-all"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (block.properties?.databaseId) {
+                                    router.push(`/workspaces/${workspaceId}/databases/${block.properties.databaseId}`);
+                                } else {
+                                    alert("Error: Database ID missing");
+                                }
+                            }}
+                        >
+                            <span className="text-xl">📊</span>
+                            <span className="font-medium underline decoration-muted-foreground/30 underline-offset-4">
+                                {block.content || "Sin título"}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 

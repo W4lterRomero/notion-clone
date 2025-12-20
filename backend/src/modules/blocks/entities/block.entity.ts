@@ -24,6 +24,7 @@ export enum BlockType {
     DIVIDER = 'divider',
     CALLOUT = 'callout',
     IMAGE = 'image',
+    CHILD_DATABASE = 'child_database',
 }
 
 @Entity('blocks')

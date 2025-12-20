@@ -46,7 +46,7 @@ export default function DatabasePage() {
                 />
             </div>
             <div className="flex-1 overflow-hidden">
-                <DatabaseView databaseId={databaseId} />
+                <DatabaseView databaseId={databaseId} showHeader={false} className="p-0" />
             </div>
         </div>
     )

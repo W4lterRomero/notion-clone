@@ -13,9 +13,11 @@ import { Loader2, Database } from 'lucide-react'
 
 interface DatabaseViewProps {
     databaseId: string
+    showHeader?: boolean
+    className?: string
 }
 
-export default function DatabaseView({ databaseId }: DatabaseViewProps) {
+export default function DatabaseView({ databaseId, showHeader = true, className }: DatabaseViewProps) {
     const { data: database, isLoading: loadingDb, error } = useDatabase(databaseId)
     const { data: views, isLoading: loadingViews } = useDatabaseViews(databaseId)
 
@@ -67,12 +69,14 @@ export default function DatabaseView({ databaseId }: DatabaseViewProps) {
     }
 
     return (
-        <div className="p-6">
+        <div className={`p-6 ${className || ''}`}>
             {/* Header */}
-            <div className="mb-6 flex items-center gap-3">
-                <span className="text-4xl">{database.icon || '📊'}</span>
-                <h1 className="text-3xl font-semibold">{database.title}</h1>
-            </div>
+            {showHeader && (
+                <div className="mb-6 flex items-center gap-3">
+                    <span className="text-4xl">{database.icon || '📊'}</span>
+                    <h1 className="text-3xl font-semibold">{database.title}</h1>
+                </div>
+            )}
 
             {/* View Switcher */}
             <ViewSwitcher
