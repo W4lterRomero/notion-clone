@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Check } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateRowValue } from '@/hooks/useDatabaseRows'
 import { useUpdateProperty } from '@/hooks/useDatabaseProperties'
-import { OPTION_COLORS, SelectOption } from './SelectCell'
+import { OPTION_COLORS, COLOR_NAMES, SelectOption } from './SelectCell'
+import { cn } from '@/lib/utils'
 
-// Use native crypto.randomUUID instead of uuid package
 const generateId = () => crypto.randomUUID()
 
 interface MultiSelectCellProps {
@@ -30,16 +30,10 @@ export default function MultiSelectCell({
     const updateValueMutation = useUpdateRowValue()
     const updatePropertyMutation = useUpdateProperty()
 
-    // Get options from property config
     const options: SelectOption[] = (property.config as { options?: SelectOption[] })?.options || []
-
-    // Selected IDs (ensure array)
     const selectedIds: string[] = Array.isArray(value) ? value : []
-
-    // Selected options
     const selectedOptions = options.filter(opt => selectedIds.includes(opt.id))
 
-    // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -82,19 +76,16 @@ export default function MultiSelectCell({
         const newOption: SelectOption = {
             id: generateId(),
             name: newOptionName.trim(),
-            color: Object.keys(OPTION_COLORS)[options.length % 8],
+            color: COLOR_NAMES[options.length % COLOR_NAMES.length],
         }
 
-        const updatedOptions = [...options, newOption]
-
-        // Update property config with new option
         await updatePropertyMutation.mutateAsync({
             databaseId,
             propertyId: property.id,
-            config: { options: updatedOptions },
+            config: { options: [...options, newOption] },
         })
 
-        // Add to selection
+        // Also select the new option
         const newValue = [...selectedIds, newOption.id]
         await updateValueMutation.mutateAsync({
             databaseId,
@@ -108,7 +99,7 @@ export default function MultiSelectCell({
     }
 
     return (
-        <div ref={menuRef} className="relative min-w-[150px]">
+        <div ref={menuRef} className="relative w-full">
             {/* Trigger */}
             <div
                 className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors flex items-center gap-1 flex-wrap min-h-[40px]"
@@ -118,7 +109,11 @@ export default function MultiSelectCell({
                     selectedOptions.map((option) => (
                         <span
                             key={option.id}
-                            className={`px-2 py-0.5 rounded text-sm flex items-center gap-1 ${OPTION_COLORS[option.color]?.bg || 'bg-gray-100'} ${OPTION_COLORS[option.color]?.text || 'text-gray-700'}`}
+                            className={cn(
+                                "px-2 py-0.5 rounded text-sm font-medium flex items-center gap-1",
+                                OPTION_COLORS[option.color]?.bg,
+                                OPTION_COLORS[option.color]?.text
+                            )}
                         >
                             {option.name}
                             <X
@@ -135,32 +130,42 @@ export default function MultiSelectCell({
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-popover border rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-popover border rounded-lg shadow-lg overflow-hidden">
                     {/* Options list */}
-                    {options.map((option) => {
-                        const isSelected = selectedIds.includes(option.id)
-                        return (
-                            <div
-                                key={option.id}
-                                className={`px-3 py-2 cursor-pointer hover:bg-muted transition-colors flex items-center justify-between ${isSelected ? 'bg-muted/50' : ''
-                                    }`}
-                                onClick={() => handleToggle(option.id)}
-                            >
-                                <span
-                                    className={`px-2 py-0.5 rounded text-sm ${OPTION_COLORS[option.color]?.bg || 'bg-gray-100'} ${OPTION_COLORS[option.color]?.text || 'text-gray-700'}`}
+                    <div className="max-h-48 overflow-y-auto">
+                        {options.map((option) => {
+                            const isSelected = selectedIds.includes(option.id)
+                            return (
+                                <div
+                                    key={option.id}
+                                    className={cn(
+                                        "px-3 py-2 cursor-pointer hover:bg-muted transition-colors flex items-center justify-between",
+                                        isSelected && "bg-muted/50"
+                                    )}
+                                    onClick={() => handleToggle(option.id)}
                                 >
-                                    {option.name}
-                                </span>
-                                {isSelected && (
-                                    <span className="text-primary text-sm">✓</span>
-                                )}
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded text-sm font-medium",
+                                        OPTION_COLORS[option.color]?.bg,
+                                        OPTION_COLORS[option.color]?.text
+                                    )}>
+                                        {option.name}
+                                    </span>
+                                    {isSelected && <Check size={14} className="text-primary" />}
+                                </div>
+                            )
+                        })}
+
+                        {options.length === 0 && !isCreating && (
+                            <div className="px-3 py-3 text-sm text-muted-foreground text-center">
+                                Sin opciones
                             </div>
-                        )
-                    })}
+                        )}
+                    </div>
 
                     {/* Create new option */}
                     {isCreating ? (
-                        <div className="px-3 py-2 border-t">
+                        <div className="p-2 border-t">
                             <input
                                 type="text"
                                 value={newOptionName}
@@ -169,8 +174,8 @@ export default function MultiSelectCell({
                                     if (e.key === 'Enter') handleCreateOption()
                                     if (e.key === 'Escape') setIsCreating(false)
                                 }}
-                                className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="Nombre de opción"
+                                className="w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background"
+                                placeholder="Nombre de opción..."
                                 autoFocus
                             />
                         </div>

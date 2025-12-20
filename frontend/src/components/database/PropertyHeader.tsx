@@ -109,10 +109,8 @@ export default function PropertyHeader({
                                 }
                             }}
                             onBlur={(e) => {
-                                // Don't close if clicking on type selector
                                 const relatedTarget = e.relatedTarget as HTMLElement
                                 if (relatedTarget?.closest?.('.property-type-selector')) return
-                                // Delay to allow type selection click to register
                                 setTimeout(() => {
                                     if (!isSelectingType) {
                                         setIsCreating(false)

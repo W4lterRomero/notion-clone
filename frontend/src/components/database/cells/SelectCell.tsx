@@ -1,25 +1,27 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Plus, X } from 'lucide-react'
+import { ChevronDown, Plus, X, Check } from 'lucide-react'
 import { DatabaseProperty } from '@/hooks/useDatabases'
 import { useUpdateRowValue } from '@/hooks/useDatabaseRows'
 import { useUpdateProperty } from '@/hooks/useDatabaseProperties'
+import { cn } from '@/lib/utils'
 
-// Use native crypto.randomUUID instead of uuid package
 const generateId = () => crypto.randomUUID()
 
-// Color palette for select options
+// Clean, Notion-like color palette
 export const OPTION_COLORS: Record<string, { bg: string; text: string }> = {
-    red: { bg: 'bg-red-100', text: 'text-red-700' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-700' },
-    yellow: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-    green: { bg: 'bg-green-100', text: 'text-green-700' },
-    blue: { bg: 'bg-blue-100', text: 'text-blue-700' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-700' },
-    pink: { bg: 'bg-pink-100', text: 'text-pink-700' },
-    gray: { bg: 'bg-gray-100', text: 'text-gray-700' },
+    red: { bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-800 dark:text-red-200' },
+    orange: { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-800 dark:text-orange-200' },
+    yellow: { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-800 dark:text-yellow-200' },
+    green: { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-200' },
+    blue: { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-800 dark:text-blue-200' },
+    purple: { bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-800 dark:text-purple-200' },
+    pink: { bg: 'bg-pink-100 dark:bg-pink-900/40', text: 'text-pink-800 dark:text-pink-200' },
+    gray: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200' },
 }
+
+export const COLOR_NAMES = Object.keys(OPTION_COLORS)
 
 export interface SelectOption {
     id: string
@@ -47,13 +49,9 @@ export default function SelectCell({
     const updateValueMutation = useUpdateRowValue()
     const updatePropertyMutation = useUpdateProperty()
 
-    // Get options from property config
     const options: SelectOption[] = (property.config as { options?: SelectOption[] })?.options || []
-
-    // Find selected option
     const selectedOption = options.find(opt => opt.id === value)
 
-    // Close dropdown on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -81,41 +79,42 @@ export default function SelectCell({
         const newOption: SelectOption = {
             id: generateId(),
             name: newOptionName.trim(),
-            color: Object.keys(OPTION_COLORS)[options.length % 8], // Cycle colors
+            color: COLOR_NAMES[options.length % COLOR_NAMES.length],
         }
 
-        const updatedOptions = [...options, newOption]
-
-        // Update property config with new option
         await updatePropertyMutation.mutateAsync({
             databaseId,
             propertyId: property.id,
-            config: { options: updatedOptions },
+            config: { options: [...options, newOption] },
         })
 
-        // Select the new option
         await handleSelect(newOption.id)
         setNewOptionName('')
         setIsCreating(false)
     }
 
     return (
-        <div ref={menuRef} className="relative min-w-[150px]">
+        <div ref={menuRef} className="relative w-full">
             {/* Trigger */}
             <div
-                className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-between"
+                className="px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-between min-h-[40px]"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 {selectedOption ? (
-                    <span
-                        className={`px-2 py-0.5 rounded text-sm ${OPTION_COLORS[selectedOption.color]?.bg || 'bg-gray-100'} ${OPTION_COLORS[selectedOption.color]?.text || 'text-gray-700'}`}
-                    >
+                    <span className={cn(
+                        "px-2 py-0.5 rounded text-sm font-medium",
+                        OPTION_COLORS[selectedOption.color]?.bg,
+                        OPTION_COLORS[selectedOption.color]?.text
+                    )}>
                         {selectedOption.name}
                     </span>
                 ) : (
                     <span className="text-muted-foreground/50 text-sm">Seleccionar...</span>
                 )}
-                <ChevronDown size={14} className="text-muted-foreground" />
+                <ChevronDown size={14} className={cn(
+                    "text-muted-foreground transition-transform",
+                    isOpen && "rotate-180"
+                )} />
             </div>
 
             {/* Dropdown */}
@@ -124,33 +123,40 @@ export default function SelectCell({
                     {/* Clear option */}
                     {value && (
                         <div
-                            className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2"
+                            className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer flex items-center gap-2 border-b"
                             onClick={() => handleSelect(null)}
                         >
                             <X size={14} />
-                            <span>Limpiar selección</span>
+                            <span>Limpiar</span>
                         </div>
                     )}
 
                     {/* Options list */}
-                    {options.map((option) => (
-                        <div
-                            key={option.id}
-                            className={`px-3 py-2 cursor-pointer hover:bg-muted transition-colors ${option.id === value ? 'bg-muted' : ''
-                                }`}
-                            onClick={() => handleSelect(option.id)}
-                        >
-                            <span
-                                className={`px-2 py-0.5 rounded text-sm ${OPTION_COLORS[option.color]?.bg || 'bg-gray-100'} ${OPTION_COLORS[option.color]?.text || 'text-gray-700'}`}
+                    <div className="max-h-48 overflow-y-auto">
+                        {options.map((option) => (
+                            <div
+                                key={option.id}
+                                className={cn(
+                                    "px-3 py-2 cursor-pointer hover:bg-muted transition-colors flex items-center justify-between",
+                                    option.id === value && "bg-muted"
+                                )}
+                                onClick={() => handleSelect(option.id)}
                             >
-                                {option.name}
-                            </span>
-                        </div>
-                    ))}
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded text-sm font-medium",
+                                    OPTION_COLORS[option.color]?.bg,
+                                    OPTION_COLORS[option.color]?.text
+                                )}>
+                                    {option.name}
+                                </span>
+                                {option.id === value && <Check size={14} className="text-primary" />}
+                            </div>
+                        ))}
+                    </div>
 
                     {/* Create new option */}
                     {isCreating ? (
-                        <div className="px-3 py-2 border-t">
+                        <div className="p-2 border-t">
                             <input
                                 type="text"
                                 value={newOptionName}
@@ -159,8 +165,8 @@ export default function SelectCell({
                                     if (e.key === 'Enter') handleCreateOption()
                                     if (e.key === 'Escape') setIsCreating(false)
                                 }}
-                                className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="Nombre de opción"
+                                className="w-full px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/50 bg-background"
+                                placeholder="Nombre de opción..."
                                 autoFocus
                             />
                         </div>
