@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Settings, Type, Hash, Calendar, CheckSquare, Link, AtSign, Phone, Users, List, Tag } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Plus, Settings, Type, Hash, Calendar, CheckSquare, Link, AtSign, Phone, Users, List, Tag, Trash2, MoreHorizontal } from 'lucide-react'
 import { DatabaseProperty, PropertyType } from '@/hooks/useDatabases'
-import { useCreateProperty } from '@/hooks/useDatabaseProperties'
+import { useCreateProperty, useDeleteProperty } from '@/hooks/useDatabaseProperties'
 import PropertyConfigModal from './PropertyConfigModal'
 
 interface PropertyHeaderProps {
@@ -57,7 +57,10 @@ export default function PropertyHeader({
     const [isCreating, setIsCreating] = useState(false)
     const [isSelectingType, setIsSelectingType] = useState(false)
     const [isConfigOpen, setIsConfigOpen] = useState(false)
+    const [showMenu, setShowMenu] = useState(false)
     const [newPropertyName, setNewPropertyName] = useState('')
+    const menuRef = useRef<HTMLDivElement>(null)
+    const deletePropertyMutation = useDeleteProperty()
     const [selectedType, setSelectedType] = useState<PropertyType>('text')
     const createPropertyMutation = useCreateProperty()
 
@@ -158,10 +161,21 @@ export default function PropertyHeader({
     if (!property) return null
 
     const canConfigure = property.type === 'select' || property.type === 'multi_select' || property.type === 'relation' || property.type === 'rollup'
+    const canDelete = property.type !== 'title'
+
+    const handleDeleteProperty = async () => {
+        if (confirm(`¿Eliminar la propiedad "${property.name}"?`)) {
+            await deletePropertyMutation.mutateAsync({
+                databaseId,
+                propertyId: property.id,
+            })
+        }
+        setShowMenu(false)
+    }
 
     return (
         <>
-            <div className="px-3 py-2 border-r border-b bg-muted/50 min-w-[150px] group">
+            <div ref={menuRef} className="px-3 py-2 border-r border-b bg-muted/50 min-w-[150px] group relative">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">
@@ -169,17 +183,41 @@ export default function PropertyHeader({
                         </span>
                         <span className="text-sm font-medium">{property.name}</span>
                     </div>
-                    {canConfigure && (
+                    {(canConfigure || canDelete) && (
                         <button
-                            onClick={() => setIsConfigOpen(true)}
+                            onClick={() => setShowMenu(!showMenu)}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded transition-all"
-                            title="Configurar opciones"
                         >
-                            <Settings size={14} />
+                            <MoreHorizontal size={14} />
                         </button>
                     )}
                 </div>
+
+                {showMenu && (
+                    <div className="absolute right-0 top-full mt-1 bg-popover border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                        {canConfigure && (
+                            <button
+                                onClick={() => { setIsConfigOpen(true); setShowMenu(false); }}
+                                className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted"
+                            >
+                                <Settings size={14} />
+                                Configurar
+                            </button>
+                        )}
+                        {canDelete && (
+                            <button
+                                onClick={handleDeleteProperty}
+                                className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted text-destructive"
+                            >
+                                <Trash2 size={14} />
+                                Eliminar
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {showMenu && <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />}
 
             {canConfigure && (
                 <PropertyConfigModal
@@ -194,3 +232,4 @@ export default function PropertyHeader({
         </>
     )
 }
+

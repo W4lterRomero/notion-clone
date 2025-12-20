@@ -23,11 +23,17 @@ export default function DatabaseView({ databaseId, showHeader = true, className 
 
     const [currentViewId, setCurrentViewId] = useState<string | null>(null)
 
-    // Set default view when views load
+    // Set default view when views load OR when current view no longer exists (was deleted)
     useEffect(() => {
-        if (views && views.length > 0 && !currentViewId) {
-            const defaultView = views.find(v => v.isDefault) || views[0]
-            setCurrentViewId(defaultView.id)
+        if (views && views.length > 0) {
+            // Check if current view still exists
+            const currentViewExists = currentViewId && views.some(v => v.id === currentViewId)
+
+            if (!currentViewExists) {
+                // Current view was deleted or not set, switch to default/first view
+                const defaultView = views.find(v => v.isDefault) || views[0]
+                setCurrentViewId(defaultView.id)
+            }
         }
     }, [views, currentViewId])
 
