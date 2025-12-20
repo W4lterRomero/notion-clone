@@ -58,13 +58,8 @@ export default function PageEditorPage() {
         );
     }
 
-    // [DEBUG] Always log page data to debug intermittent type detection
-    console.log('[PageEditorPage] Rendering - pageId:', pageId, 'page:', page, 'page.type:', page?.type);
-
-    // [CRITICAL FIX] If this is a database, render DatabaseView directly
-    // No redirect needed - just show the database table
+    // If this is a database, render DatabaseView directly
     if (page.type === 'database') {
-        console.log('[PageEditorPage] Detected DATABASE type - rendering DatabaseView');
         return (
             <div className="min-h-screen">
                 {/* Back button */}
