@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { usePage, usePages } from "@/hooks/usePages";
 import { BlockEditor } from "@/components/editor/BlockEditor";
 import { PageHeader } from "@/components/editor/PageHeader";
@@ -31,6 +31,13 @@ export default function PageEditorPage() {
             console.error("Failed to update icon:", error);
         }
     };
+
+    const router = useRouter()
+
+    if (page?.type === 'database') {
+        router.replace(`/workspaces/${params.id}/databases/${pageId}`)
+        return null
+    }
 
     if (isLoading) {
         return (
