@@ -293,6 +293,14 @@ export function BlockRenderer({
                         parentId: block.pageId,
                     });
                     console.log("Database created:", newDatabase);
+
+                    // [PREMIUM FIX] Update current block to be a "child_database" block
+                    onUpdate({
+                        type: "child_database",
+                        content: newDatabase.title,
+                        properties: { databaseId: newDatabase.id }
+                    });
+
                     // Navigate to the new database
                     router.push(`/workspaces/${workspaceId}/databases/${newDatabase.id}`);
                 } catch (error: unknown) {
@@ -638,10 +646,32 @@ export function BlockRenderer({
                 </div>
             )}
 
-            {/* Content - UNCONTROLLED contentEditable */}
+            {/* [PREMIUM FIX] Child Database Link Rendering */}
+            {block.type === "child_database" && (
+                <div
+                    contentEditable={false}
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer border border-transparent hover:border-border transition-all"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        // Navigate to database
+                        if (block.properties?.databaseId) {
+                            router.push(`/workspaces/${workspaceId}/databases/${block.properties.databaseId}`);
+                        } else {
+                            alert("Error: Database ID missing");
+                        }
+                    }}
+                >
+                    <span className="text-xl">📊</span>
+                    <span className="font-medium underline decoration-muted-foreground/30 underline-offset-4">
+                        {block.content || "Sin título"}
+                    </span>
+                </div>
+            )}
+
+            {/* Content - UNCONTROLLED contentEditable (Hidden for child_database) */}
             <div
                 ref={contentRef}
-                contentEditable
+                contentEditable={block.type !== "child_database"}
                 suppressContentEditableWarning
                 onClick={onFocus}
                 onInput={handleInput}
@@ -657,7 +687,7 @@ export function BlockRenderer({
                     block.type === "todo" &&
                     block.properties?.checked &&
                     "line-through text-muted-foreground",
-                    getBlockStyles()
+                    block.type === "child_database" ? "hidden" : getBlockStyles()
                 )}
                 data-placeholder={blockPlaceholders[block.type] || "Escribe algo..."}
             />

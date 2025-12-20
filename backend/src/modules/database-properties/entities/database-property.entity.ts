@@ -30,6 +30,7 @@ export enum PropertyType {
     CREATED_BY = 'created_by',
     LAST_EDITED_TIME = 'last_edited_time',
     LAST_EDITED_BY = 'last_edited_by',
+    STATUS = 'status',
 }
 
 // Property config interfaces for type safety

@@ -165,7 +165,10 @@ export function PageTree({ workspaceId }: PageTreeProps) {
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Link
-                                                href={`/workspaces/${workspaceId}/pages/${page.id}`}
+                                                href={page.type === 'database'
+                                                    ? `/workspaces/${workspaceId}/databases/${page.id}`
+                                                    : `/workspaces/${workspaceId}/pages/${page.id}`
+                                                }
                                                 className={cn(
                                                     "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-all w-full",
                                                     "hover:bg-muted hover:pl-3",
@@ -174,7 +177,7 @@ export function PageTree({ workspaceId }: PageTreeProps) {
                                                 )}
                                             >
                                                 <span className="text-base flex-shrink-0">
-                                                    {page.icon || "📄"}
+                                                    {page.icon || (page.type === 'database' ? '📊' : '📄')}
                                                 </span>
                                                 <span className="truncate flex-1">
                                                     {title}
